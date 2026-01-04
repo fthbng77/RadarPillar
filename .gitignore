@@ -10,3 +10,5 @@ data/astyx/gt_database/
 pcdet/version.py
 pcdet.egg-info/
 *.so
+data/astyx/
+.venv/

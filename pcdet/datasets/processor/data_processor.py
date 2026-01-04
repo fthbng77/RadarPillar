@@ -40,34 +40,70 @@ class DataProcessor(object):
 
         return data_dict
 
-    def transform_points_to_voxels(self, data_dict=None, config=None, voxel_generator=None):
+    def transform_points_to_voxels(self, data_dict=None, config=None, voxel_generator=None, use_spconv2=False):
+        """
+        Supports both spconv 1.x (VoxelGenerator/VoxelGeneratorV2) and spconv 2.x (PointToVoxel).
+        Normalizes output to numpy arrays for downstream code.
+        """
         if data_dict is None:
-            try:
-                from spconv.utils import VoxelGeneratorV2 as VoxelGenerator
-            except:
-                from spconv.utils import VoxelGenerator
-
-            voxel_generator = VoxelGenerator(
-                voxel_size=config.VOXEL_SIZE,
-                point_cloud_range=self.point_cloud_range,
-                max_num_points=config.MAX_POINTS_PER_VOXEL,
-                max_voxels=config.MAX_NUMBER_OF_VOXELS[self.mode]
-            )
             grid_size = (self.point_cloud_range[3:6] - self.point_cloud_range[0:3]) / np.array(config.VOXEL_SIZE)
             self.grid_size = np.round(grid_size).astype(np.int64)
             self.voxel_size = config.VOXEL_SIZE
-            return partial(self.transform_points_to_voxels, voxel_generator=voxel_generator)
+            # Delay voxel generator creation until we know point feature dimension.
+            return partial(self.transform_points_to_voxels, config=config, voxel_generator=None, use_spconv2=False)
 
         points = data_dict['points']
-        voxel_output = voxel_generator.generate(points)
-        if isinstance(voxel_output, dict):
-            voxels, coordinates, num_points = \
-                voxel_output['voxels'], voxel_output['coordinates'], voxel_output['num_points_per_voxel']
+        if isinstance(points, np.ndarray):
+            pts = points
         else:
-            voxels, coordinates, num_points = voxel_output
+            pts = points.cpu().numpy()
+
+        if voxel_generator is None:
+            # Instantiate generator lazily based on incoming point feature dimension.
+            num_point_features = pts.shape[1]
+            try:
+                from spconv.pytorch.utils import PointToVoxel  # spconv 2.x
+                voxel_generator = PointToVoxel(
+                    vsize_xyz=config.VOXEL_SIZE,
+                    coors_range_xyz=self.point_cloud_range,
+                    num_point_features=num_point_features,
+                    max_num_voxels=config.MAX_NUMBER_OF_VOXELS[self.mode],
+                    max_num_points_per_voxel=config.MAX_POINTS_PER_VOXEL,
+                )
+                use_spconv2 = True
+            except Exception:
+                try:
+                    from spconv.utils import VoxelGeneratorV2 as VoxelGenerator  # spconv 1.x
+                except Exception:
+                    from spconv.utils import VoxelGenerator  # fallback
+                voxel_generator = VoxelGenerator(
+                    voxel_size=config.VOXEL_SIZE,
+                    point_cloud_range=self.point_cloud_range,
+                    max_num_points=config.MAX_POINTS_PER_VOXEL,
+                    max_voxels=config.MAX_NUMBER_OF_VOXELS[self.mode]
+                )
+
+        if isinstance(voxel_generator, tuple):
+            # should not happen, kept for safety
+            voxel_generator = voxel_generator[0]
+
+        if hasattr(voxel_generator, 'generate'):
+            # spconv 1.x path
+            voxel_output = voxel_generator.generate(pts)
+            if isinstance(voxel_output, dict):
+                voxels, coordinates, num_points = \
+                    voxel_output['voxels'], voxel_output['coordinates'], voxel_output['num_points_per_voxel']
+            else:
+                voxels, coordinates, num_points = voxel_output
+        elif use_spconv2:
+            # spconv 2.x PointToVoxel path
+            voxels, coordinates, num_points = voxel_generator(pts)
+            voxels = voxels.numpy()
+            coordinates = coordinates.numpy()
+            num_points = num_points.numpy()
 
         if not data_dict['use_lead_xyz']:
-            voxels = voxels[..., 3:]  # remove xyz in voxels(N, 3)
+            voxels = voxels[..., 3:]
 
         data_dict['voxels'] = voxels
         data_dict['voxel_coords'] = coordinates

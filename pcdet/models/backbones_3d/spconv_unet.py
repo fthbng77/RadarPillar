@@ -1,6 +1,7 @@
 from functools import partial
 
-import spconv
+import spconv.pytorch as spconv
+from spconv.pytorch import SparseConvTensor, SparseSequential, SparseConv3d, SparseInverseConv3d, SubMConv3d
 import torch
 import torch.nn as nn
 
@@ -8,17 +9,17 @@ from ...utils import common_utils
 from .spconv_backbone import post_act_block
 
 
-class SparseBasicBlock(spconv.SparseModule):
+class SparseBasicBlock(nn.Module):
     expansion = 1
 
     def __init__(self, inplanes, planes, stride=1, downsample=None, indice_key=None, norm_fn=None):
         super(SparseBasicBlock, self).__init__()
-        self.conv1 = spconv.SubMConv3d(
+        self.conv1 = SubMConv3d(
             inplanes, planes, kernel_size=3, stride=stride, padding=1, bias=False, indice_key=indice_key
         )
         self.bn1 = norm_fn(planes)
         self.relu = nn.ReLU()
-        self.conv2 = spconv.SubMConv3d(
+        self.conv2 = SubMConv3d(
             planes, planes, kernel_size=3, stride=1, padding=1, bias=False, indice_key=indice_key
         )
         self.bn2 = norm_fn(planes)
@@ -61,32 +62,32 @@ class UNetV2(nn.Module):
 
         norm_fn = partial(nn.BatchNorm1d, eps=1e-3, momentum=0.01)
 
-        self.conv_input = spconv.SparseSequential(
-            spconv.SubMConv3d(input_channels, 16, 3, padding=1, bias=False, indice_key='subm1'),
+        self.conv_input = SparseSequential(
+            SubMConv3d(input_channels, 16, 3, padding=1, bias=False, indice_key='subm1'),
             norm_fn(16),
             nn.ReLU(),
         )
         block = post_act_block
 
-        self.conv1 = spconv.SparseSequential(
+        self.conv1 = SparseSequential(
             block(16, 16, 3, norm_fn=norm_fn, padding=1, indice_key='subm1'),
         )
 
-        self.conv2 = spconv.SparseSequential(
+        self.conv2 = SparseSequential(
             # [1600, 1408, 41] <- [800, 704, 21]
             block(16, 32, 3, norm_fn=norm_fn, stride=2, padding=1, indice_key='spconv2', conv_type='spconv'),
             block(32, 32, 3, norm_fn=norm_fn, padding=1, indice_key='subm2'),
             block(32, 32, 3, norm_fn=norm_fn, padding=1, indice_key='subm2'),
         )
 
-        self.conv3 = spconv.SparseSequential(
+        self.conv3 = SparseSequential(
             # [800, 704, 21] <- [400, 352, 11]
             block(32, 64, 3, norm_fn=norm_fn, stride=2, padding=1, indice_key='spconv3', conv_type='spconv'),
             block(64, 64, 3, norm_fn=norm_fn, padding=1, indice_key='subm3'),
             block(64, 64, 3, norm_fn=norm_fn, padding=1, indice_key='subm3'),
         )
 
-        self.conv4 = spconv.SparseSequential(
+        self.conv4 = SparseSequential(
             # [400, 352, 11] <- [200, 176, 5]
             block(64, 64, 3, norm_fn=norm_fn, stride=2, padding=(0, 1, 1), indice_key='spconv4', conv_type='spconv'),
             block(64, 64, 3, norm_fn=norm_fn, padding=1, indice_key='subm4'),
@@ -96,10 +97,10 @@ class UNetV2(nn.Module):
         if self.model_cfg.get('RETURN_ENCODED_TENSOR', True):
             last_pad = self.model_cfg.get('last_pad', 0)
 
-            self.conv_out = spconv.SparseSequential(
+            self.conv_out = SparseSequential(
                 # [200, 150, 5] -> [200, 150, 2]
-                spconv.SparseConv3d(64, 128, (3, 1, 1), stride=(2, 1, 1), padding=last_pad,
-                                    bias=False, indice_key='spconv_down2'),
+                SparseConv3d(64, 128, (3, 1, 1), stride=(2, 1, 1), padding=last_pad,
+                             bias=False, indice_key='spconv_down2'),
                 norm_fn(128),
                 nn.ReLU(),
             )
@@ -126,7 +127,7 @@ class UNetV2(nn.Module):
         self.conv_up_t1 = SparseBasicBlock(16, 16, indice_key='subm1', norm_fn=norm_fn)
         self.conv_up_m1 = block(32, 16, 3, norm_fn=norm_fn, indice_key='subm1')
 
-        self.conv5 = spconv.SparseSequential(
+        self.conv5 = SparseSequential(
             block(16, 16, 3, norm_fn=norm_fn, padding=1, indice_key='subm1')
         )
         self.num_point_features = 16
@@ -172,7 +173,7 @@ class UNetV2(nn.Module):
         """
         voxel_features, voxel_coords = batch_dict['voxel_features'], batch_dict['voxel_coords']
         batch_size = batch_dict['batch_size']
-        input_sp_tensor = spconv.SparseConvTensor(
+        input_sp_tensor = SparseConvTensor(
             features=voxel_features,
             indices=voxel_coords.int(),
             spatial_shape=self.sparse_shape,

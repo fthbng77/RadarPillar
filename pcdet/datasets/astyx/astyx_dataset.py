@@ -93,8 +93,10 @@ class AstyxDataset(DatasetTemplate):
 
     def get_image_shape(self, idx):
         img_file = self.root_split_path / 'camera_front' / ('%s.jpg' % idx)
-        assert img_file.exists()
-        return np.array(io.imread(img_file).shape[:2], dtype=np.int32)
+        if img_file.exists():
+            return np.array(io.imread(img_file).shape[:2], dtype=np.int32)
+        # Radar-only setup: return placeholder shape
+        return np.array([0, 0], dtype=np.int32)
 
     def get_label(self, idx):
         label_file = self.root_split_path / 'groundtruth_obj3d' / ('%s.json' % idx)
@@ -168,7 +170,10 @@ class AstyxDataset(DatasetTemplate):
             pc_info = {'num_features': num_features, 'pc_idx': sample_idx}
             info['point_cloud'] = pc_info
 
-            image_info = {'image_idx': sample_idx, 'image_shape': self.get_image_shape(sample_idx)}
+            if self.pc_type == 'radar':
+                image_info = {'image_idx': sample_idx, 'image_shape': np.array([0, 0], dtype=np.int32)}
+            else:
+                image_info = {'image_idx': sample_idx, 'image_shape': self.get_image_shape(sample_idx)}
             info['image'] = image_info
             calib = self.get_calib(sample_idx)
             info['calib'] = calib
@@ -437,7 +442,7 @@ class AstyxDataset(DatasetTemplate):
             points = np.concatenate([points[:, :5], vx, vy], axis=1)
 
         img_shape = info['image']['image_shape']
-        if self.dataset_cfg.FOV_POINTS_ONLY:
+        if self.dataset_cfg.FOV_POINTS_ONLY and img_shape.sum() > 0:
             pts_rect = calib.lidar_to_rect(points[:, 0:3])
             fov_flag = self.get_fov_flag(pts_rect, img_shape, calib)
             points = points[fov_flag]
