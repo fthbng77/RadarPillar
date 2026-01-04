@@ -1,5 +1,5 @@
 DATASET: 'AstyxDataset'
-DATA_PATH: '../data/astyx'
+DATA_PATH: './data/astyx'
 
 POINT_CLOUD_TYPE: ['radar']
 POINT_CLOUD_RANGE:  [0, -39.68, -3, 99.84, 39.68, 1]
