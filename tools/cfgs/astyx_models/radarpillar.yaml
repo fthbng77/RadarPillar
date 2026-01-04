@@ -1,8 +1,8 @@
-CLASS_NAMES: ['Car', 'Pedestrian', 'Cyclist']
+CLASS_NAMES: ['Car', 'Pedestrian']
 
 DATA_CONFIG:
     _BASE_CONFIG_: tools/cfgs/dataset_configs/astyx_dataset_radar.yaml
-    POINT_CLOUD_RANGE: [0, -40.96, -3, 76.8, 40.96, 1]
+    POINT_CLOUD_RANGE: [0, -40.8, -3, 76.8, 40.8, 1]
     DATA_PROCESSOR:
         - NAME: mask_points_and_boxes_outside_range
           REMOVE_OUTSIDE_BOXES: True

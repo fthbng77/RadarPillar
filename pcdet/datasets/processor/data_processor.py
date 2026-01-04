@@ -1,6 +1,7 @@
 from functools import partial
 
 import numpy as np
+import torch
 
 from ...utils import box_utils, common_utils
 
@@ -53,9 +54,11 @@ class DataProcessor(object):
             return partial(self.transform_points_to_voxels, config=config, voxel_generator=None, use_spconv2=False)
 
         points = data_dict['points']
+        points_tensor = None
         if isinstance(points, np.ndarray):
             pts = points
         else:
+            points_tensor = points
             pts = points.cpu().numpy()
 
         if voxel_generator is None:
@@ -96,11 +99,15 @@ class DataProcessor(object):
             else:
                 voxels, coordinates, num_points = voxel_output
         elif use_spconv2:
-            # spconv 2.x PointToVoxel path
-            voxels, coordinates, num_points = voxel_generator(pts)
-            voxels = voxels.numpy()
-            coordinates = coordinates.numpy()
-            num_points = num_points.numpy()
+            # spconv 2.x PointToVoxel path expects torch tensors
+            if points_tensor is None:
+                pts_t = torch.from_numpy(pts).float()
+            else:
+                pts_t = points_tensor.float()
+            voxels, coordinates, num_points = voxel_generator(pts_t)
+            voxels = voxels.cpu().numpy()
+            coordinates = coordinates.cpu().numpy()
+            num_points = num_points.cpu().numpy()
 
         if not data_dict['use_lead_xyz']:
             voxels = voxels[..., 3:]

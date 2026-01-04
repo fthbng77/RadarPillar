@@ -264,6 +264,12 @@ class AstyxDataset(DatasetTemplate):
             info = infos[k]
             sample_idx = info['point_cloud']['pc_idx']
             points = self.get_pointcloud(sample_idx, self.pc_type)
+            if self.pc_type == 'radar' and points.shape[1] >= 5:
+                phi = np.arctan2(points[:, 1], points[:, 0] + 1e-6)
+                vr = points[:, 4:5]
+                vx = vr * np.cos(phi)
+                vy = vr * np.sin(phi)
+                points = np.concatenate([points[:, :5], vx, vy], axis=1)
             annos = info['annos']
             names = annos['name']
             difficulty = annos['difficulty']
