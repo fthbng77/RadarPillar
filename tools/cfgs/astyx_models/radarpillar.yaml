@@ -31,6 +31,13 @@ MODEL:
         USE_NORM: True
         NUM_FILTERS: [64]
 
+    BACKBONE_3D:
+        NAME: PillarAttention
+        NUM_HEADS: 4
+        DROPOUT: 0.1
+        FFN_CHANNELS: 128
+        USE_LAYER_NORM: True
+
     MAP_TO_BEV:
         NAME: PointPillarScatter
         NUM_BEV_FEATURES: 64
