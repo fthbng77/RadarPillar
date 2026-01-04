@@ -1,14 +1,13 @@
 <img src="docs/open_mmlab.png" align="right" width="30%">
 
-# OpenPCDet
+# OpenPCDet (Astyx Radar Pillar)
 
-`OpenPCDet` is a clear, simple, self-contained open source project for LiDAR-based 3D object detection. 
-
-It is also the official code release of [`[PointRCNN]`](https://arxiv.org/abs/1812.04244), [`[Part-A^2 net]`](https://arxiv.org/abs/1907.03670) and [`[PV-RCNN]`](https://arxiv.org/abs/1912.13192). 
+Bu fork, Astyx radar verisi ile radar-only PointPillar eğitimi için düzenlenmiş OpenPCDet türevidir. LiDAR/çekirdek kod korunurken, görüntü bağımlılıkları kaldırıldı ve radar hız/rcs özellikleri eklendi.
 
 
 ## Overview
 - [Changelog](#changelog)
+- [Astyx Radar Quickstart](#astyx-radar-quickstart)
 - [Design Pattern](#openpcdet-design-pattern)
 - [Model Zoo](#model-zoo)
 - [Installation](docs/INSTALL.md)
@@ -18,18 +17,30 @@ It is also the official code release of [`[PointRCNN]`](https://arxiv.org/abs/18
 
 
 ## Changelog
-[2020-08-10] **NEW:** Bugfixed: The provided NuScenes models have been updated to fix the loading bugs. Please redownload it if you need to use the pretrained NuScenes models.
+[2026-01] Astyx radar pipeline: 7 özellikli (x,y,z,rcs,vr,vx,vy) point loader, hız uyumlu augmentasyonlar, `tools/cfgs/astyx_models/radarpillar.yaml`.
 
-[2020-07-30] **NEW:** `OpenPCDet` v0.3.0 is released with the following features:
-   * The Point-based and Anchor-Free models ([`PointRCNN`](#KITTI-3D-Object-Detection-Baselines), [`PartA2-Free`](#KITTI-3D-Object-Detection-Baselines)) are supported now.
-   * The NuScenes dataset is supported with strong baseline results ([`SECOND-MultiHead (CBGS)`](#NuScenes-3D-Object-Detection-Baselines) and [`PointPillar-MultiHead`](#NuScenes-3D-Object-Detection-Baselines)).
-   * High efficiency than last version, support `PyTorch 1.1~1.5` and `spconv 1.0~1.2` simultaneously.
-   
-[2020-07-17]  Add simple visualization codes and a quick demo to test with custom data. 
+## Astyx Radar Quickstart
 
-[2020-06-24] `OpenPCDet` v0.2.0 is released with pretty new structures to support more models and datasets. 
-
-[2020-03-16] `OpenPCDet` v0.1.0 is released. 
+- Ortam: Python 3.8/3.9, PyTorch 2.4+cu12, spconv 2.3.6. Öneri:
+  ```bash
+  python -m venv .venv
+  source .venv/bin/activate
+  python -m pip install -U pip
+  python setup.py develop
+  ```
+- Veri yapısı (radar-only): `data/astyx/training/` ve `data/astyx/testing/` altında `radar/*.bin` dosyaları, `ImageSets/train.txt`, `val.txt`, `test.txt`.
+- Info + gt database üretimi:
+  ```bash
+  python -m pcdet.datasets.astyx.astyx_dataset create_astyx_infos tools/cfgs/dataset_configs/astyx_dataset_radar.yaml
+  ```
+- Eğitim (PointPillar, 0.2 m x-y, 4 m z pillar):
+  ```bash
+  CUDA_VISIBLE_DEVICES=0 python tools/train.py --cfg_file tools/cfgs/astyx_models/radarpillar.yaml --batch_size 4
+  ```
+- Eval:
+  ```bash
+  CUDA_VISIBLE_DEVICES=0 python test.py --cfg_file tools/cfgs/astyx_models/radarpillar.yaml --ckpt <ckpt_path>
+  ```
 
 
 ## Introduction
