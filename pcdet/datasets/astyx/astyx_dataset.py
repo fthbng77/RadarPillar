@@ -86,7 +86,8 @@ class AstyxDataset(DatasetTemplate):
         elif pc_type == 'radar':
             radar_file = self.root_split_path / 'radar_6455' / ('%s.txt' % idx)
             assert radar_file.exists()
-            return np.loadtxt(str(radar_file), dtype=np.float32, skiprows=2, usecols=(0, 1, 2, 4))
+            # Expect columns: x, y, z, rcs, radial_velocity
+            return np.loadtxt(str(radar_file), dtype=np.float32, skiprows=2, usecols=(0, 1, 2, 3, 4))
         else:
             pass
 
@@ -163,7 +164,8 @@ class AstyxDataset(DatasetTemplate):
         def process_single_scene(sample_idx):
             print('%s sample_idx: %s' % (self.split, sample_idx))
             info = {}
-            pc_info = {'num_features': 4, 'pc_idx': sample_idx}
+            num_features = 7 if self.pc_type == 'radar' else 4
+            pc_info = {'num_features': num_features, 'pc_idx': sample_idx}
             info['point_cloud'] = pc_info
 
             image_info = {'image_idx': sample_idx, 'image_shape': self.get_image_shape(sample_idx)}
@@ -426,6 +428,13 @@ class AstyxDataset(DatasetTemplate):
 
         points = self.get_pointcloud(sample_idx, self.pc_type)
         calib = info['calib']
+
+        if self.pc_type == 'radar' and points.shape[1] >= 5:
+            phi = np.arctan2(points[:, 1], points[:, 0] + 1e-6)
+            vr = points[:, 4:5]
+            vx = vr * np.cos(phi)
+            vy = vr * np.sin(phi)
+            points = np.concatenate([points[:, :5], vx, vy], axis=1)
 
         img_shape = info['image']['image_shape']
         if self.dataset_cfg.FOV_POINTS_ONLY:

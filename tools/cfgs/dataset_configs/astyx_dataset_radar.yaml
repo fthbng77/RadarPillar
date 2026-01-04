@@ -30,7 +30,7 @@ DATA_AUGMENTOR:
           }
 
           SAMPLE_GROUPS: ['Car:20','Pedestrian:15', 'Cyclist:15']
-          NUM_POINT_FEATURES: 5
+          NUM_POINT_FEATURES: 7
           DATABASE_WITH_FAKELIDAR: False
           REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
           LIMIT_WHOLE_SCENE: True
@@ -47,8 +47,8 @@ DATA_AUGMENTOR:
 
 POINT_FEATURE_ENCODING: {
     encoding_type: absolute_coordinates_encoding,
-    used_feature_list: ['x', 'y', 'z', 'velocity', 'intensity'],
-    src_feature_list: ['x', 'y', 'z', 'velocity', 'intensity'],
+    used_feature_list: ['x', 'y', 'z', 'rcs', 'vr', 'vx', 'vy'],
+    src_feature_list: ['x', 'y', 'z', 'rcs', 'vr', 'vx', 'vy'],
 }
 
 
@@ -63,8 +63,8 @@ DATA_PROCESSOR:
       }
 
     - NAME: transform_points_to_voxels
-      VOXEL_SIZE: [0.05, 0.05, 0.1]
-      MAX_POINTS_PER_VOXEL: 5
+      VOXEL_SIZE: [0.2, 0.2, 4.0]
+      MAX_POINTS_PER_VOXEL: 32
       MAX_NUMBER_OF_VOXELS: {
         'train': 16000,
         'test': 40000

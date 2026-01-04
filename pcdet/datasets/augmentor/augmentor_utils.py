@@ -18,6 +18,8 @@ def random_flip_along_x(gt_boxes, points):
 
         if gt_boxes.shape[1] > 7:
             gt_boxes[:, 8] = -gt_boxes[:, 8]
+        if points.shape[1] >= 7:
+            points[:, 6] = -points[:, 6]
 
     return gt_boxes, points
 
@@ -37,6 +39,8 @@ def random_flip_along_y(gt_boxes, points):
 
         if gt_boxes.shape[1] > 7:
             gt_boxes[:, 7] = -gt_boxes[:, 7]
+        if points.shape[1] >= 7:
+            points[:, 5] = -points[:, 5]
 
     return gt_boxes, points
 
@@ -58,6 +62,10 @@ def global_rotation(gt_boxes, points, rot_range):
             np.hstack((gt_boxes[:, 7:9], np.zeros((gt_boxes.shape[0], 1))))[np.newaxis, :, :],
             np.array([noise_rotation])
         )[0][:, 0:2]
+    if points.shape[1] >= 7:
+        velocity = np.hstack((points[:, 5:7], np.zeros((points.shape[0], 1), dtype=points.dtype)))
+        velocity = common_utils.rotate_points_along_z(velocity[np.newaxis, :, :], np.array([noise_rotation]))[0]
+        points[:, 5:7] = velocity[:, 0:2]
 
     return gt_boxes, points
 
