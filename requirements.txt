@@ -1,7 +1,7 @@
 numpy
 torch>=1.1
 numba<=0.58.0
-tensorboardX
+tensorboardX<=2.6
 easydict
 pyyaml
 scikit-image
