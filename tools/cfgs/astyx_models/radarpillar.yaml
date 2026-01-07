@@ -30,18 +30,18 @@ MODEL:
         USE_ABSLOTE_XYZ: True
         USE_NORM: True
         USE_VELOCITY_DECOMPOSITION: True
-        NUM_FILTERS: [64]
+        NUM_FILTERS: [32]
 
     BACKBONE_3D:
         NAME: PillarAttention
-        NUM_HEADS: 4
-        DROPOUT: 0.1
-        FFN_CHANNELS: 128
+        NUM_HEADS: 1
+        DROPOUT: 0.0
+        FFN_CHANNELS: 32
         USE_LAYER_NORM: True
 
     MAP_TO_BEV:
         NAME: PointPillarScatter
-        NUM_BEV_FEATURES: 64
+        NUM_BEV_FEATURES: 32
 
     BACKBONE_2D:
         NAME: BaseBEVBackbone
