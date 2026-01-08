@@ -23,6 +23,30 @@ bağımlılıkları kaldırıldı ve radar hız/rcs özellikleri eklendi.
 ## Changelog
 [2026-01] Astyx radar pipeline: 7 özellikli (x,y,z,rcs,vr,vx,vy) point loader, hız uyumlu augmentasyonlar, `tools/cfgs/astyx_models/astyx_radarpillar.yaml`.
 [2026-02] VoD radar pipeline: dataset config, info üretimi, `tools/cfgs/vod_models/vod_radarpillar.yaml`.
+[2026-02] WandB entegrasyonu: Eğitim metriklerini takip etmek için `--use_wandb` bayrağı eklendi.
+
+## WandB Entegrasyonu ve Kullanımı
+
+Eğitim süreçlerinizi Weights & Biases (WandB) üzerinden takip etmek için aşağıdaki adımları izleyin:
+
+1. **Kurulum**:
+   Eğer `.venv` kullanıyorsanız, aktif ettiğinizden emin olun:
+   ```bash
+   source .venv/bin/activate
+   ```
+
+2. **Giriş Yapma**:
+   WandB hesabınıza terminal üzerinden giriş yapın:
+   ```bash
+   wandb login
+   ```
+   API anahtarınızı [WandB Settings](https://wandb.ai/settings) sayfasından alabilirsiniz.
+
+3. **Eğitimi Başlatma**:
+   Eğitim komutuna `--use_wandb` bayrağını ekleyerek metriklerin WandB'ye gönderilmesini sağlayın:
+   ```bash
+   python tools/train.py --cfg_file tools/cfgs/vod_models/vod_radarpillar.yaml --use_wandb
+   ```
 
 ## Astyx Radar Quickstart
 
