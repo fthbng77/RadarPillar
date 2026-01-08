@@ -14,6 +14,10 @@ from pcdet.config import cfg, cfg_from_list, cfg_from_yaml_file, log_config_to_f
 from pcdet.datasets import build_dataloader
 from pcdet.models import build_network, model_fn_decorator
 from pcdet.utils import common_utils
+try:
+    import wandb
+except ImportError:
+    wandb = None
 from train_utils.optimization import build_optimizer, build_scheduler
 from train_utils.train_utils import train_model
 
@@ -42,6 +46,7 @@ def parse_config():
     parser.add_argument('--max_waiting_mins', type=int, default=0, help='max waiting minutes')
     parser.add_argument('--start_epoch', type=int, default=0, help='')
     parser.add_argument('--save_to_file', action='store_true', default=False, help='')
+    parser.add_argument('--use_wandb', action='store_true', default=False, help='whether to use wandb')
 
     args = parser.parse_args()
 
@@ -99,6 +104,16 @@ def main():
         os.system('cp %s %s' % (args.cfg_file, output_dir))
 
     tb_log = SummaryWriter(log_dir=str(output_dir / 'tensorboard')) if cfg.LOCAL_RANK == 0 else None
+
+    if args.use_wandb and cfg.LOCAL_RANK == 0:
+        if wandb is None:
+            raise ImportError('Please install wandb using "pip install wandb"')
+        wandb.init(
+            project='astyx-RadarPillar' if args.extra_tag == 'default' else args.extra_tag,
+            name=cfg.TAG,
+            config=cfg,
+            sync_tensorboard=True  # Optional: sync tensorboard logs to wandb automatically
+        )
 
     # -----------------------create dataloader & network & optimizer---------------------------
     train_set, train_loader, train_sampler = build_dataloader(
@@ -167,7 +182,8 @@ def main():
         lr_warmup_scheduler=lr_warmup_scheduler,
         ckpt_save_interval=args.ckpt_save_interval,
         max_ckpt_save_num=args.max_ckpt_save_num,
-        merge_all_iters_to_one_epoch=args.merge_all_iters_to_one_epoch
+        merge_all_iters_to_one_epoch=args.merge_all_iters_to_one_epoch,
+        use_wandb=args.use_wandb
     )
 
     logger.info('**********************End training %s/%s(%s)**********************\n\n\n'
