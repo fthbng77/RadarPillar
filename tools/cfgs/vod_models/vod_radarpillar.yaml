@@ -10,20 +10,21 @@ MODEL:
     VFE:
         NAME: PillarVFE
         WITH_DISTANCE: False
-        USE_ABSLOTE_XYZ: True
+        USE_ABSOLUTE_XYZ: True
         USE_NORM: True
         USE_VELOCITY_DECOMPOSITION: True
-        USE_REL_VELOCITY_DECOMPOSITION: True
+        USE_REL_VELOCITY_DECOMPOSITION: False
         USE_VELOCITY_OFFSET: True
-        USE_REL_VELOCITY_OFFSET: True
+        USE_REL_VELOCITY_OFFSET: False
         VELOCITY_REL_INDEX: 4
         VELOCITY_COMP_INDEX: 5
         NORMALIZE_VELOCITY_COMP: True
-        NORMALIZE_VELOCITY_REL: True
+        NORMALIZE_VELOCITY_REL: False
         VELOCITY_COMP_MEAN: [0.020094, -0.003165]
         VELOCITY_COMP_STD: [0.891514, 0.452536]
-        VELOCITY_REL_MEAN: [0.009422, 0.008432]
-        VELOCITY_REL_STD: [0.901047, 0.433537]
+        FEATURE_ORDER: ['x', 'y', 'z', 'vx', 'vy', 'rcs', 'time', 'v_offset']
+        RCS_INDEX: 3
+        TIME_INDEX: 6
         NUM_FILTERS: [32]
 
     BACKBONE_3D:
@@ -58,9 +59,9 @@ MODEL:
         ANCHOR_GENERATOR_CONFIG: [
             {
                 'class_name': 'Car',
-                'anchor_sizes': [[4.17, 1.84, 1.57]],
+                'anchor_sizes': [[4.19, 1.83, 1.57]],
                 'anchor_rotations': [0, 1.57],
-                'anchor_bottom_heights': [-1.78],
+                'anchor_bottom_heights': [-0.83],
                 'align_center': False,
                 'feature_map_stride': 2,
                 'matched_threshold': 0.6,
@@ -68,9 +69,9 @@ MODEL:
             },
             {
                 'class_name': 'Pedestrian',
-                'anchor_sizes': [[0.65, 0.64, 1.65]],
+                'anchor_sizes': [[0.66, 0.64, 1.64]],
                 'anchor_rotations': [0, 1.57],
-                'anchor_bottom_heights': [-0.6],
+                'anchor_bottom_heights': [-0.83],
                 'align_center': False,
                 'feature_map_stride': 2,
                 'matched_threshold': 0.5,
@@ -78,9 +79,9 @@ MODEL:
             },
             {
                 'class_name': 'Cyclist',
-                'anchor_sizes': [[1.59, 0.69, 1.42]],
+                'anchor_sizes': [[1.62, 0.70, 1.42]],
                 'anchor_rotations': [0, 1.57],
-                'anchor_bottom_heights': [-0.6],
+                'anchor_bottom_heights': [-0.76],
                 'align_center': False,
                 'feature_map_stride': 2,
                 'matched_threshold': 0.5,
@@ -120,7 +121,7 @@ MODEL:
 
 
 OPTIMIZATION:
-    BATCH_SIZE_PER_GPU: 8
+    BATCH_SIZE_PER_GPU: 16
     NUM_EPOCHS: 80
 
     OPTIMIZER: adam_onecycle
