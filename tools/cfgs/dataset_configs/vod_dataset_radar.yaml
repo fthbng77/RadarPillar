@@ -16,13 +16,9 @@ INFO_PATH: {
 FOV_POINTS_ONLY: True
 
 CLASS_MAPPINGS: {
-    'bicycle': 'Cyclist',
-    'rider': 'Cyclist',
-    'Cyclist': 'Cyclist',
-    'moped_scooter': 'Cyclist',
-    'motor': 'Cyclist',
-    'ride_other': 'Cyclist',
-    'ride_uncertain': 'Cyclist'
+    'Car': 'Car',
+    'Pedestrian': 'Pedestrian',
+    'Cyclist': 'Cyclist'
 }
 
 POINT_FEATURE_ENCODING: {
@@ -38,8 +34,22 @@ POINT_FEATURE_NORMALIZATION: {
 }
 
 DATA_AUGMENTOR:
-    DISABLE_AUG_LIST: ['random_world_rotation', 'gt_sampling']
+    DISABLE_AUG_LIST: ['random_world_rotation'] # Radar için rotasyon genelde önerilmez
     AUG_CONFIG_LIST:
+        - NAME: gt_sampling
+          USE_ROAD_PLANE: False
+          DB_INFO_PATH:
+              - vod_dbinfos_train.pkl
+          PREPARE:
+             filter_by_min_points: ['Car:5', 'Pedestrian:2', 'Cyclist:2'] # Radar noktaları az olduğu için eşiği düşük tuttuk
+             #filter_by_difficulty: [-1]
+
+          SAMPLE_GROUPS: ['Car:15','Pedestrian:15', 'Cyclist:15'] # Sınıfları dengeleyen kısım burası!
+          NUM_POINT_FEATURES: 7
+          DATABASE_WITH_FAKELIDAR: False
+          REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
+          LIMIT_WHOLE_SCENE: True
+
         - NAME: random_world_flip
           ALONG_AXIS_LIST: ['x']
 
@@ -61,6 +71,6 @@ DATA_PROCESSOR:
       VOXEL_SIZE: [0.16, 0.16, 5.0]
       MAX_POINTS_PER_VOXEL: 10
       MAX_NUMBER_OF_VOXELS: {
-        'train': 16000,
+        'train': 40000,
         'test': 40000
       }
