@@ -74,8 +74,30 @@ def train_one_epoch(model, optimizer, train_loader, model_func, lr_scheduler, ac
 def train_model(model, optimizer, train_loader, model_func, lr_scheduler, optim_cfg,
                 start_epoch, total_epochs, start_iter, rank, tb_log, ckpt_save_dir, train_sampler=None,
                 lr_warmup_scheduler=None, ckpt_save_interval=1, max_ckpt_save_num=50,
-                merge_all_iters_to_one_epoch=False, use_wandb=False):
+                merge_all_iters_to_one_epoch=False, use_wandb=False,
+                eval_loader=None, eval_model=None, eval_func=None, eval_output_dir=None,
+                eval_interval=1, early_stop_cfg=None, dist_test=False):
     accumulated_iter = start_iter
+    best_metric = None
+    best_epoch = -1
+    bad_epochs = 0
+
+    def _get_cfg(cfg_dict, key, default=None):
+        if cfg_dict is None:
+            return default
+        if key in cfg_dict:
+            return cfg_dict.get(key, default)
+        lower_key = key.lower()
+        if lower_key in cfg_dict:
+            return cfg_dict.get(lower_key, default)
+        return default
+
+    def _is_improved(cur_metric, best_val, mode, min_delta):
+        if best_val is None:
+            return True
+        if mode == 'min':
+            return cur_metric < best_val - min_delta
+        return cur_metric > best_val + min_delta
     with tqdm.trange(start_epoch, total_epochs, desc='epochs', dynamic_ncols=True, leave=(rank == 0)) as tbar:
         total_it_each_epoch = len(train_loader)
         if merge_all_iters_to_one_epoch:
@@ -119,6 +141,62 @@ def train_model(model, optimizer, train_loader, model_func, lr_scheduler, optim_
                 save_checkpoint(
                     checkpoint_state(model, optimizer, trained_epoch, accumulated_iter), filename=ckpt_name,
                 )
+
+            if eval_loader is None or eval_func is None or eval_output_dir is None:
+                continue
+
+            if trained_epoch % max(eval_interval, 1) != 0:
+                continue
+
+            if early_stop_cfg is None:
+                continue
+
+            if not _get_cfg(early_stop_cfg, 'ENABLED', False):
+                continue
+
+            start_es_epoch = int(_get_cfg(early_stop_cfg, 'START_EPOCH', 0))
+            if trained_epoch < start_es_epoch:
+                continue
+
+            eval_model_to_use = eval_model if eval_model is not None else model
+            cur_result_dir = eval_output_dir / ('epoch_%s' % trained_epoch)
+            eval_ret = eval_func(
+                eval_model_to_use, eval_loader, trained_epoch, result_dir=cur_result_dir, dist_test=dist_test
+            )
+            model.train()
+            if eval_model_to_use is not model:
+                eval_model_to_use.train()
+
+            if rank != 0:
+                continue
+
+            metric_key = _get_cfg(early_stop_cfg, 'METRIC', None)
+            if metric_key is None or metric_key not in eval_ret:
+                continue
+
+            cur_metric = float(eval_ret[metric_key])
+            mode = str(_get_cfg(early_stop_cfg, 'MODE', 'max')).lower()
+            min_delta = float(_get_cfg(early_stop_cfg, 'MIN_DELTA', 0.0))
+            patience = int(_get_cfg(early_stop_cfg, 'PATIENCE', 10))
+
+            if _is_improved(cur_metric, best_metric, mode, min_delta):
+                best_metric = cur_metric
+                best_epoch = trained_epoch
+                bad_epochs = 0
+                if _get_cfg(early_stop_cfg, 'SAVE_BEST', True):
+                    ckpt_name = ckpt_save_dir / 'checkpoint_best'
+                    save_checkpoint(
+                        checkpoint_state(model, optimizer, trained_epoch, accumulated_iter), filename=ckpt_name,
+                    )
+            else:
+                bad_epochs += 1
+                if bad_epochs >= patience:
+                    if rank == 0:
+                        print(
+                            'Early stopping at epoch %d (best %s=%.6f at epoch %d)'
+                            % (trained_epoch, metric_key, best_metric, best_epoch)
+                        )
+                    break
 
 
 def model_state_to_cpu(model_state):

@@ -122,7 +122,16 @@ MODEL:
 
 OPTIMIZATION:
     BATCH_SIZE_PER_GPU: 16
-    NUM_EPOCHS: 80
+    NUM_EPOCHS: 160
+    eval_interval: 1
+    early_stop:
+        enabled: True
+        metric: Car_3d/moderate_R40
+        mode: max
+        patience: 10
+        min_delta: 0.0
+        start_epoch: 60
+        save_best: True
 
     OPTIMIZER: adam_onecycle
     LR: 0.003
