@@ -160,7 +160,8 @@ def main():
     eval_output_dir = output_dir / 'eval'
 
     if not args.eval_all:
-        num_list = re.findall(r'\d+', args.ckpt) if args.ckpt is not None else []
+        ckpt_name = Path(args.ckpt).name if args.ckpt is not None else ''
+        num_list = re.findall(r'\d+', ckpt_name)
         epoch_id = num_list[-1] if num_list.__len__() > 0 else 'no_number'
         eval_output_dir = eval_output_dir / ('epoch_%s' % epoch_id) / cfg.DATA_CONFIG.DATA_SPLIT['test']
     else:

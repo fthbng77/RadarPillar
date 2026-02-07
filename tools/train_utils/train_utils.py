@@ -1,5 +1,6 @@
 import glob
 import os
+from pathlib import Path
 
 import torch
 import tqdm
@@ -78,6 +79,9 @@ def train_model(model, optimizer, train_loader, model_func, lr_scheduler, optim_
                 eval_loader=None, eval_model=None, eval_func=None, eval_output_dir=None,
                 eval_interval=1, early_stop_cfg=None, dist_test=False):
     accumulated_iter = start_iter
+
+    if rank == 0:
+        Path(ckpt_save_dir).mkdir(parents=True, exist_ok=True)
     best_metric = None
     best_epoch = -1
     bad_epochs = 0
@@ -98,6 +102,46 @@ def train_model(model, optimizer, train_loader, model_func, lr_scheduler, optim_
         if mode == 'min':
             return cur_metric < best_val - min_delta
         return cur_metric > best_val + min_delta
+
+    def _resolve_early_stop_metric(eval_ret, cfg_dict):
+        metric_keys = _get_cfg(cfg_dict, 'METRICS', None)
+        if metric_keys is None:
+            metric_key = _get_cfg(cfg_dict, 'METRIC', None)
+            if metric_key is None or metric_key not in eval_ret:
+                return None, None
+            return float(eval_ret[metric_key]), str(metric_key)
+
+        if not isinstance(metric_keys, (list, tuple)) or len(metric_keys) == 0:
+            return None, None
+        if not all(key in eval_ret for key in metric_keys):
+            return None, None
+
+        metric_vals = [float(eval_ret[key]) for key in metric_keys]
+        reducer = str(_get_cfg(cfg_dict, 'METRIC_REDUCER', 'mean')).lower()
+        metric_weights = _get_cfg(cfg_dict, 'METRIC_WEIGHTS', None)
+        if metric_weights is not None:
+            if not isinstance(metric_weights, (list, tuple)) or len(metric_weights) != len(metric_vals):
+                raise ValueError('METRIC_WEIGHTS must have same length as METRICS')
+            metric_weights = [float(w) for w in metric_weights]
+
+        if reducer in ['mean', 'avg']:
+            score = sum(metric_vals) / len(metric_vals)
+        elif reducer == 'sum':
+            score = sum(metric_vals)
+        elif reducer == 'min':
+            score = min(metric_vals)
+        elif reducer == 'max':
+            score = max(metric_vals)
+        elif reducer in ['weighted_mean', 'wmean']:
+            if metric_weights is None:
+                metric_weights = [1.0] * len(metric_vals)
+            denom = sum(metric_weights)
+            score = sum(v * w for v, w in zip(metric_vals, metric_weights)) / max(denom, 1e-12)
+        else:
+            raise ValueError('Unsupported METRIC_REDUCER: %s' % reducer)
+
+        return float(score), '%s(%s)' % (reducer, ','.join(metric_keys))
+
     with tqdm.trange(start_epoch, total_epochs, desc='epochs', dynamic_ncols=True, leave=(rank == 0)) as tbar:
         total_it_each_epoch = len(train_loader)
         if merge_all_iters_to_one_epoch:
@@ -170,11 +214,10 @@ def train_model(model, optimizer, train_loader, model_func, lr_scheduler, optim_
             if rank != 0:
                 continue
 
-            metric_key = _get_cfg(early_stop_cfg, 'METRIC', None)
-            if metric_key is None or metric_key not in eval_ret:
+            cur_metric, metric_name = _resolve_early_stop_metric(eval_ret, early_stop_cfg)
+            if cur_metric is None:
                 continue
 
-            cur_metric = float(eval_ret[metric_key])
             mode = str(_get_cfg(early_stop_cfg, 'MODE', 'max')).lower()
             min_delta = float(_get_cfg(early_stop_cfg, 'MIN_DELTA', 0.0))
             patience = int(_get_cfg(early_stop_cfg, 'PATIENCE', 10))
@@ -194,7 +237,7 @@ def train_model(model, optimizer, train_loader, model_func, lr_scheduler, optim_
                     if rank == 0:
                         print(
                             'Early stopping at epoch %d (best %s=%.6f at epoch %d)'
-                            % (trained_epoch, metric_key, best_metric, best_epoch)
+                            % (trained_epoch, metric_name, best_metric, best_epoch)
                         )
                     break
 
@@ -232,5 +275,6 @@ def save_checkpoint(state, filename='checkpoint'):
         optimizer_filename = '{}_optim.pth'.format(filename)
         torch.save({'optimizer_state': optimizer_state}, optimizer_filename)
 
-    filename = '{}.pth'.format(filename)
-    torch.save(state, filename)
+    filename = Path('{}.pth'.format(filename))
+    filename.parent.mkdir(parents=True, exist_ok=True)
+    torch.save(state, str(filename))
