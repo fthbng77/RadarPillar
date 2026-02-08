@@ -11,10 +11,27 @@ except ImportError:
     wandb = None
 
 
+def _is_torch_scheduler(scheduler):
+    lrscheduler_cls = getattr(torch.optim.lr_scheduler, 'LRScheduler', None)
+    if lrscheduler_cls is not None and isinstance(scheduler, lrscheduler_cls):
+        return True
+    return isinstance(scheduler, torch.optim.lr_scheduler._LRScheduler)
+
+
+def _step_scheduler(scheduler, cur_iter):
+    if scheduler is None:
+        return
+    if _is_torch_scheduler(scheduler):
+        scheduler.step()
+    else:
+        scheduler.step(cur_iter)
+
+
 def train_one_epoch(model, optimizer, train_loader, model_func, lr_scheduler, accumulated_iter, optim_cfg,
                     rank, tbar, total_it_each_epoch, dataloader_iter, tb_log=None, leave_pbar=False, use_wandb=False):
     if total_it_each_epoch == len(train_loader):
         dataloader_iter = iter(train_loader)
+    scheduler_is_torch = _is_torch_scheduler(lr_scheduler) if lr_scheduler is not None else False
 
     if rank == 0:
         pbar = tqdm.tqdm(total=total_it_each_epoch, leave=leave_pbar, desc='train', dynamic_ncols=True)
@@ -27,7 +44,8 @@ def train_one_epoch(model, optimizer, train_loader, model_func, lr_scheduler, ac
             batch = next(dataloader_iter)
             print('new iters')
 
-        lr_scheduler.step(accumulated_iter)
+        if lr_scheduler is not None and not scheduler_is_torch:
+            lr_scheduler.step(accumulated_iter)
 
         try:
             cur_lr = float(optimizer.lr)
@@ -45,6 +63,8 @@ def train_one_epoch(model, optimizer, train_loader, model_func, lr_scheduler, ac
         loss.backward()
         clip_grad_norm_(model.parameters(), optim_cfg.GRAD_NORM_CLIP)
         optimizer.step()
+        if scheduler_is_torch:
+            _step_scheduler(lr_scheduler, accumulated_iter)
 
         accumulated_iter += 1
         disp_dict.update({'loss': loss.item(), 'lr': cur_lr})
