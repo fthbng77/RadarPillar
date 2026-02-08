@@ -33,13 +33,27 @@ POINT_FEATURE_ENCODING: {
 
 POINT_FEATURE_NORMALIZATION: {
     USE_NORM: True,
-    MEAN: [0.0, 0.0, 0.0, -12.7030, -3.5275, 0.1117, -1.9941],
-    STD: [1.0, 1.0, 1.0, 14.0523, 3.3211, 2.3325, 1.4142],
+    MEAN: [0.0, 0.0, 0.0, -12.4070, -3.1957, 0.0387, -1.9943],
+    STD: [1.0, 1.0, 1.0, 13.9321, 2.7279, 2.0727, 1.4141],
 }
 
 DATA_AUGMENTOR:
-    DISABLE_AUG_LIST: ['random_world_rotation', 'gt_sampling']
+    DISABLE_AUG_LIST: ['random_world_rotation']
     AUG_CONFIG_LIST:
+        - NAME: gt_sampling
+          USE_ROAD_PLANE: False
+          DB_INFO_PATH:
+              - vod_dbinfos_train.pkl
+          PREPARE: {
+             filter_by_min_points: ['Car:3', 'Pedestrian:2', 'Cyclist:2'],
+          }
+
+          SAMPLE_GROUPS: ['Car:15','Pedestrian:10', 'Cyclist:10']
+          NUM_POINT_FEATURES: 7
+          DATABASE_WITH_FAKELIDAR: False
+          REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
+          LIMIT_WHOLE_SCENE: True
+
         - NAME: random_world_flip
           ALONG_AXIS_LIST: ['x']
 

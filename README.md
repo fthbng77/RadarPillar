@@ -104,6 +104,39 @@ Eğitim süreçlerinizi Weights & Biases (WandB) üzerinden takip etmek için a�
   ```
 
 
+
+## Dataset Visualization & Anchor Verification
+
+Veri setindeki nesne dağılımlarını analiz etmek ve anchor boyutlarının (şablon kutular) doğruluğunu kontrol etmek için aşağıdaki araçları kullanabilirsiniz.
+
+### 1. Anchor Doğrulama Grafiği
+Bu grafik, veri setindeki gerçek nesne boyutlarını (bulut şeklinde) ve üzerine yerleştirilen Baseline (v5) ile Master (v7) anchor'larını gösterir. Master sürümündeki bisikletli performans kaybının, anchor boyutunun veri ortalamasından çok büyük seçilmesinden kaynaklandığı burada görselleştirilmiştir.
+
+![Anchor Verification](docs/visualizations/anchor_verification.png)
+
+*   **Siyah Çarpı (Baseline):** 1.59m - Veri merkezine tam oturur.
+*   **Mavi Baklava (Master):** 1.94m - Veri bulutu dışına sapmıştır.
+
+### 2. Cyclist Uzunluk Dağılımı (Histogram)
+Bu grafik, `Cyclist` sınıfının aslında iki farklı gruptan (durağan bisikletler ve hareketli sürücüler) oluştuğunu ve tek bir anchor'ın neden "orta yol" (1.62m) değerinde olması gerektiğini gösterir.
+
+![Cyclist Distribution](docs/visualizations/cyclist_dist.png)
+
+### İzleme ve Analiz Komutları
+Veri setini kendi başınıza analiz etmek için şu scriptleri çalıştırabilirsiniz:
+
+```bash
+# Nesne boyutlarını dağılım grafiği olarak kaydeder (tools/anchor_verification.png)
+python tools/visualize_anchors.py
+
+# Cyclist sınıfı için detaylı histogram üretir (tools/cyclist_dist.png)
+python tools/plot_cyclist_dist.py
+
+# Veri setindeki (PKL vs Raw Label) tutarlılığı kontrol eder
+python tools/check_data_consistency.py
+```
+
+
 ## Introduction
 
 
