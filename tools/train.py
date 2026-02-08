@@ -110,7 +110,7 @@ def main():
         if wandb is None:
             raise ImportError('Please install wandb using "pip install wandb"')
         wandb.init(
-            project='astyx-RadarPillar' if args.extra_tag == 'default' else args.extra_tag,
+            project='RadarPillar' if args.extra_tag == 'default' else args.extra_tag,
             name=cfg.TAG,
             config=cfg,
             sync_tensorboard=True  # Optional: sync tensorboard logs to wandb automatically

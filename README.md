@@ -12,6 +12,7 @@ bağımlılıkları kaldırıldı ve radar hız/rcs özellikleri eklendi.
 - [Changelog](#changelog)
 - [Astyx Radar Quickstart](#astyx-radar-quickstart)
 - [VoD Radar Quickstart](#vod-radar-quickstart)
+- [Google Colab Quickstart](#google-colab-quickstart)
 - [Design Pattern](#openpcdet-design-pattern)
 - [Model Zoo](#model-zoo)
 - [Installation](docs/INSTALL.md)
@@ -102,6 +103,15 @@ Eğitim süreçlerinizi Weights & Biases (WandB) üzerinden takip etmek için a�
   ```bash
   CUDA_VISIBLE_DEVICES=0 python test.py --cfg_file tools/cfgs/vod_models/vod_radarpillar.yaml --ckpt <ckpt_path>
   ```
+
+## Google Colab Quickstart
+
+Bulut üzerinde eğitim yapmak için `notebooks/RadarPillar_Colab.ipynb` dosyasını kullanabilirsiniz:
+
+1.  **Notebook'u Açın**: `notebooks/RadarPillar_Colab.ipynb` dosyasını Google Colab'a yükleyin.
+2.  **GPU Ayarı**: `Düzenle > Not Defteri Ayarları` kısmından GPU (T4 veya A100) seçildiğinden emin olun.
+3.  **Drive Bağlantısı**: Veri setlerinizi Google Drive üzerinde saklamanız önerilir. Notebook içerisindeki sembolik link hücrelerini kendi yollarınıza göre düzenleyin.
+4.  **Kurulum**: Notebook'daki kurulum hücrelerini sırayla çalıştırarak `spconv` ve `pcdet` kurulumlarını tamamlayın.
 
 
 ## Introduction
