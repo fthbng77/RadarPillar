@@ -7,6 +7,9 @@ Bu fork, Astyx ve View-of-Delft (VoD) radar verileri ile radar-only RadarPillars
 eğitimi için düzenlenmiş OpenPCDet türevidir. LiDAR/çekirdek kod korunurken, görüntü
 bağımlılıkları kaldırıldı ve radar hız/rcs özellikleri eklendi.
 
+> **This work is currently under review.**
+> Pre-trained model weights and full reproduction details will be released upon paper acceptance.
+> Please do not use or redistribute without written permission from the authors.
 
 ## Overview
 - [Changelog](#changelog)
