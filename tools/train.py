@@ -80,7 +80,7 @@ def main():
 
     args.epochs = cfg.OPTIMIZATION.NUM_EPOCHS if args.epochs is None else args.epochs
 
-    if args.fix_random_seed:
+    if args.fix_random_seed or cfg.OPTIMIZATION.get('FIX_RANDOM_SEED', False):
         common_utils.set_random_seed(666)
 
     output_dir = cfg.ROOT_DIR / 'output' / cfg.EXP_GROUP_PATH / cfg.TAG / args.extra_tag

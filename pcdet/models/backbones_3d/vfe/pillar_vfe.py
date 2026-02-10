@@ -55,7 +55,7 @@ class PillarVFE(VFETemplate):
 
         self.use_norm = self.model_cfg.USE_NORM
         self.with_distance = self.model_cfg.WITH_DISTANCE
-        self.use_absolute_xyz = self.model_cfg.USE_ABSOLUTE_XYZ
+        self.use_absolute_xyz = self.model_cfg.get('USE_ABSOLUTE_XYZ', self.model_cfg.get('USE_ABSLOTE_XYZ'))
         self.use_velocity_decomposition = self.model_cfg.get('USE_VELOCITY_DECOMPOSITION', False)
         self.use_rel_velocity_decomposition = self.model_cfg.get('USE_REL_VELOCITY_DECOMPOSITION', False)
         self.use_velocity_offset = self.model_cfg.get('USE_VELOCITY_OFFSET', False)

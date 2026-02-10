@@ -7,6 +7,9 @@ Bu fork, Astyx ve View-of-Delft (VoD) radar verileri ile radar-only RadarPillars
 eğitimi için düzenlenmiş OpenPCDet türevidir. LiDAR/çekirdek kod korunurken, görüntü
 bağımlılıkları kaldırıldı ve radar hız/rcs özellikleri eklendi.
 
+> **This work is currently under review.**
+> Pre-trained model weights and full reproduction details will be released upon paper acceptance.
+> Please do not use or redistribute without written permission from the authors.
 
 ## Overview
 - [Changelog](#changelog)
@@ -24,6 +27,9 @@ bağımlılıkları kaldırıldı ve radar hız/rcs özellikleri eklendi.
 [2026-01] Astyx radar pipeline: 7 özellikli (x,y,z,rcs,vr,vx,vy) point loader, hız uyumlu augmentasyonlar, `tools/cfgs/astyx_models/astyx_radarpillar.yaml`.
 [2026-02] VoD radar pipeline: dataset config, info üretimi, `tools/cfgs/vod_models/vod_radarpillar.yaml`.
 [2026-02] WandB entegrasyonu: Eğitim metriklerini takip etmek için `--use_wandb` bayrağı eklendi.
+[2026-02] Augmentor bug fix: Radar verisi için `random_flip` ve `global_rotation` fonksiyonlarındaki hız indeks hatası düzeltildi.
+[2026-02] Dual Cyclist anchor: Bisiklet ve motosiklet alt-tiplerini ayrı yakalayan çift anchor stratejisi eklendi.
+[2026-02] BEV görselleştirme aracı: `tools/visualize_bev.py` ile tahmin sonuçlarını kuşbakışı görselleştirme.
 
 ## WandB Entegrasyonu ve Kullanımı
 
@@ -105,6 +111,46 @@ Eğitim süreçlerinizi Weights & Biases (WandB) üzerinden takip etmek için a�
 
 
 
+## Experiment Results
+
+### Augmentor Bug Fix (v5 vs boxq_v7)
+
+Radar verisinde `augmentor_utils.py` içindeki `random_flip` ve `global_rotation` fonksiyonları, `points[:, 5:7]` indekslerini LiDAR'daki gibi `[vx, vy]` olarak işliyordu. Ancak radar verisinde bu indeksler `[v_r_comp, time]` değerlerini taşır. Bu hata, flip augmentation sırasında **zaman damgasının** negatife çevrilmesine neden oluyordu. Düzeltme ile velocity dönüşümleri yalnızca `gt_boxes > 7` sütun taşıdığında (yani gerçek hız bilgisi varken) uygulanır.
+
+| Deney | Config | Car 3D | Ped 3D | Cyclist 3D |
+|---|---|---|---|---|
+| boxq_v7 (flip kapalı, bug'lu) | Tek anchor, NMS=0.05 | 38.58 | 0.60 | 0.00 |
+| **return_v5** (flip açık, bug düzeltilmiş) | Tek anchor, NMS=0.01 | 35.35 | 31.99 | 17.65 |
+
+> Pedestrian: 0.60 → 32.00 | Cyclist: 0.00 → 17.65
+
+### Dual Cyclist Anchor (2peakcyclist)
+
+VoD datasetindeki Cyclist sınıfı, `bicycle`, `rider`, `motor`, `moped_scooter` gibi farklı boyutlarda alt-tipleri içerir. Tek anchor (1.59×0.69) bu çeşitliliği yakalayamıyordu. Çift anchor stratejisi ile küçük (bisiklet) ve büyük (motosiklet) araçlar ayrı yakalanır.
+
+| Deney | Car 3D | Ped 3D | Cyclist 3D | Weighted Mean |
+|---|---|---|---|---|
+| return_v5_epoch80 (tek anchor) | 34.31 | 34.32 | 18.08 | 26.20 |
+| **2peakcyclist** (çift anchor) | 33.60 | **35.99** | **20.30** | **27.67** |
+
+> Cyclist: 18.08 → 20.30 (+2.22 AP, +%12.3) | Recall@0.3: 0.40 → 0.47
+
+### 3D AP Evolution (2peakcyclist, Epoch 30-40)
+
+![3D AP Evolution](docs/visualizations/3d_ap_evolution_2peakcyclist.png)
+
+Eğitim oldukça stabil: Cyclist AP epoch 30-40 arasında 19.5-20.4 bandında, ciddi bir salınım yok.
+
+### BEV Görselleştirme Örnekleri
+
+Aşağıdaki görsellerde sol panel ground truth, sağ panel GT + model tahminlerini gösterir. Radar noktaları RCS değerine göre renklendirilmiştir.
+
+**Sample 00315** — Yoğun şehir içi sahne (araç + bisikletli + yaya):
+![BEV Sample 00315](docs/visualizations/bev_00315.png)
+
+**Sample 00107** — Yakın mesafe bisikletli kümesi:
+![BEV Sample 00107](docs/visualizations/bev_00107.png)
+
 ## Dataset Visualization & Anchor Verification
 
 Veri setindeki nesne dağılımlarını analiz etmek ve anchor boyutlarının (şablon kutular) doğruluğunu kontrol etmek için aşağıdaki araçları kullanabilirsiniz.
@@ -134,6 +180,24 @@ python tools/plot_cyclist_dist.py
 
 # Veri setindeki (PKL vs Raw Label) tutarlılığı kontrol eder
 python tools/check_data_consistency.py
+```
+
+### 3. BEV (Kuşbakışı) Görselleştirme
+Model tahminlerini radar nokta bulutu üzerinde kuşbakışı (Bird's Eye View) olarak görselleştirir.
+GT kutuları düz çizgi, tahminler kesikli çizgi ile gösterilir. Radar noktaları RCS'ye göre renklendirilir.
+
+```bash
+# Tek bir sample için BEV görselleştirme
+python tools/visualize_bev.py \
+  --pred_dir output/cfgs/vod_models/vod_radarpillar/<experiment>/eval/epoch_<N>/val/default/final_result/data \
+  --samples 00315 00107 \
+  --score_thresh 0.15 \
+  --output_dir output_bev
+
+# Eğitim log dosyasından AP evolution grafikleri oluşturma
+python visualize_radar_logs.py \
+  --logs output/cfgs/vod_models/vod_radarpillar/<experiment>/eval/epoch_*/val/default/log_eval_*.txt \
+  --output output_plots
 ```
 
 
