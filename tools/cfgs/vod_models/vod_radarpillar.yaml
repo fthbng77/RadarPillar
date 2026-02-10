@@ -79,7 +79,7 @@ MODEL:
             },
             {
                 'class_name': 'Cyclist',
-                'anchor_sizes': [[1.59, 0.69, 1.42]],
+                'anchor_sizes': [[0.82, 0.76, 1.54], [1.89, 0.68, 1.38]],
                 'anchor_rotations': [0, 1.57],
                 'anchor_bottom_heights': [-0.6],
                 'align_center': False,
@@ -113,16 +113,16 @@ MODEL:
         EVAL_METRIC: vod
 
         NMS_CONFIG:
-            MULTI_CLASSES_NMS: False
+            MULTI_CLASSES_NMS: True
             NMS_TYPE: nms_gpu
-            NMS_THRESH: 0.01
+            NMS_THRESH: 0.1
             NMS_PRE_MAXSIZE: 4096
             NMS_POST_MAXSIZE: 500
 
 
 OPTIMIZATION:
     FIX_RANDOM_SEED: True
-    BATCH_SIZE_PER_GPU: 8
+    BATCH_SIZE_PER_GPU: 16
     NUM_EPOCHS: 40
     eval_interval: 1
     early_stop:
