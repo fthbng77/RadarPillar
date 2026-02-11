@@ -4,6 +4,7 @@ import glob
 import os
 from pathlib import Path
 from test import repeat_eval_ckpt
+from eval_utils.eval_utils import eval_one_epoch
 
 import torch
 import torch.distributed as dist
@@ -79,7 +80,7 @@ def main():
 
     args.epochs = cfg.OPTIMIZATION.NUM_EPOCHS if args.epochs is None else args.epochs
 
-    if args.fix_random_seed:
+    if args.fix_random_seed or cfg.OPTIMIZATION.get('FIX_RANDOM_SEED', False):
         common_utils.set_random_seed(666)
 
     output_dir = cfg.ROOT_DIR / 'output' / cfg.EXP_GROUP_PATH / cfg.TAG / args.extra_tag
@@ -162,6 +163,46 @@ def main():
         last_epoch=last_epoch, optim_cfg=cfg.OPTIMIZATION
     )
 
+    def _get_cfg(cfg_dict, key, default=None):
+        if cfg_dict is None:
+            return default
+        if key in cfg_dict:
+            return cfg_dict.get(key, default)
+        lower_key = key.lower()
+        if lower_key in cfg_dict:
+            return cfg_dict.get(lower_key, default)
+        return default
+
+    early_stop_cfg = None
+    if hasattr(cfg, 'OPTIMIZATION'):
+        early_stop_cfg = getattr(cfg.OPTIMIZATION, 'early_stop', None)
+        if early_stop_cfg is None:
+            early_stop_cfg = getattr(cfg.OPTIMIZATION, 'EARLY_STOP', None)
+
+    eval_interval = 1
+    if hasattr(cfg, 'OPTIMIZATION'):
+        eval_interval = getattr(cfg.OPTIMIZATION, 'eval_interval', None)
+        if eval_interval is None:
+            eval_interval = getattr(cfg.OPTIMIZATION, 'EVAL_INTERVAL', 1)
+
+    eval_loader = None
+    eval_output_dir = None
+    if early_stop_cfg is not None and _get_cfg(early_stop_cfg, 'ENABLED', False):
+        _, eval_loader, _ = build_dataloader(
+            dataset_cfg=cfg.DATA_CONFIG,
+            class_names=cfg.CLASS_NAMES,
+            batch_size=args.batch_size,
+            dist=dist_train, workers=args.workers, logger=logger, training=False
+        )
+        eval_output_dir = output_dir / 'eval' / 'eval_during_train'
+        eval_output_dir.mkdir(parents=True, exist_ok=True)
+
+    def eval_func(model_to_eval, dataloader, epoch_id, result_dir, dist_test=False):
+        return eval_one_epoch(
+            cfg, model_to_eval, dataloader, epoch_id, logger, dist_test=dist_test,
+            save_to_file=False, result_dir=result_dir
+        )
+
     # -----------------------start training---------------------------
     logger.info('**********************Start training %s/%s(%s)**********************'
                 % (cfg.EXP_GROUP_PATH, cfg.TAG, args.extra_tag))
@@ -183,7 +224,14 @@ def main():
         ckpt_save_interval=args.ckpt_save_interval,
         max_ckpt_save_num=args.max_ckpt_save_num,
         merge_all_iters_to_one_epoch=args.merge_all_iters_to_one_epoch,
-        use_wandb=args.use_wandb
+        use_wandb=args.use_wandb,
+        eval_loader=eval_loader,
+        eval_model=model.module if dist_train else model,
+        eval_func=eval_func if eval_loader is not None else None,
+        eval_output_dir=eval_output_dir,
+        eval_interval=eval_interval,
+        early_stop_cfg=early_stop_cfg,
+        dist_test=dist_train
     )
 
     logger.info('**********************End training %s/%s(%s)**********************\n\n\n'
