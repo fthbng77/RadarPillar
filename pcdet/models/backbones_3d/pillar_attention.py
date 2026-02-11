@@ -7,70 +7,83 @@ class PillarAttention(nn.Module):
         super().__init__()
         self.model_cfg = model_cfg
         self.num_point_features = input_channels
-
+        # 1. DEĞİŞİKLİK: Makaleye göre kanal sayısını sabitliyoruz (Uniform Scaling)
+        self.attn_channels = self.model_cfg.get('ATTN_CHANNELS', input_channels)
         num_heads = self.model_cfg.NUM_HEADS
-        attn_channels = self.model_cfg.get('ATTN_CHANNELS', input_channels)
         dropout = self.model_cfg.get('DROPOUT', 0.0)
-        ffn_channels = self.model_cfg.get('FFN_CHANNELS', attn_channels)
-        use_layer_norm = self.model_cfg.get('USE_LAYER_NORM', True)
+        
+        # Giriş kanalı ile attention kanalı farklıysa tek bir lineer katman yeterli
+        self.pre_mlp = nn.Linear(input_channels, self.attn_channels) if input_channels != self.attn_channels else nn.Identity()
 
-        self.pre_mlp = nn.Sequential(
-            nn.Linear(input_channels, attn_channels),
-            nn.GELU(),
-        )
+        # 2. DEĞİŞİKLİK: MultiheadAttention - batch_first=True hızı artırır
         self.attn = nn.MultiheadAttention(
-            embed_dim=attn_channels,
+            embed_dim=self.attn_channels,
             num_heads=num_heads,
             dropout=dropout,
             batch_first=True
         )
-        self.norm1 = nn.LayerNorm(attn_channels) if use_layer_norm else None
+        
+        self.norm1 = nn.LayerNorm(self.attn_channels)
+        
+        # 3. DEĞİŞİKLİK: FFN yapısını makale önerisine göre (sabit genişlik) sadeleştirdik
         self.ffn = nn.Sequential(
-            nn.Linear(attn_channels, ffn_channels),
+            nn.Linear(self.attn_channels, self.attn_channels * 2),
             nn.GELU(),
-            nn.Linear(ffn_channels, attn_channels),
+            nn.Linear(self.attn_channels * 2, self.attn_channels),
         )
-        self.norm2 = nn.LayerNorm(attn_channels) if use_layer_norm else None
-        self.post_mlp = nn.Sequential(
-            nn.Linear(attn_channels, input_channels),
-        )
+        self.norm2 = nn.LayerNorm(self.attn_channels)
+
+        # Paper Figure 3: post_mlp E→C (attention boyutundan orijinal kanal sayısına geri dönüş)
+        self.post_mlp = nn.Linear(self.attn_channels, input_channels) if input_channels != self.attn_channels else nn.Identity()
 
     def forward(self, batch_dict):
-        """
-        Args:
-            batch_dict:
-                pillar_features: (num_pillars, C)
-                voxel_coords: (num_pillars, 4)
-        Returns:
-            batch_dict:
-                pillar_features: (num_pillars, C)
-        """
-        pillar_features = batch_dict['pillar_features']
-        coords = batch_dict['voxel_coords']
-        batch_size = coords[:, 0].max().int().item() + 1
+            pillar_features = batch_dict['pillar_features'] # (num_pillars, C)
+            coords = batch_dict['voxel_coords']             # (num_pillars, 4) [batch_idx, z, y, x]
+            
+            batch_size = coords[:, 0].max().int().item() + 1
+            
+            # 4. DEĞİŞİKLİK: FOR DÖNGÜSÜNDEN KURTULMA VE MASKELİ PADDING SİSTEMİ
+            # Her batch'teki pillar sayılarını buluyoruz
+            pillar_counts = []
+            for b in range(batch_size):
+                pillar_counts.append((coords[:, 0] == b).sum().item())
+            
+            max_pillars = max(pillar_counts)
+            
+            # Boş şablonlar oluştur (Batch, Max_Pillar, Channels)
+            padded_features = torch.zeros((batch_size, max_pillars, pillar_features.shape[-1]), 
+                                        device=pillar_features.device)
+            
+            # Seyreklik Maskesi: True olan yerler 'boş' kabul edilir ve attention tarafından yok sayılır
+            key_padding_mask = torch.ones((batch_size, max_pillars), dtype=torch.bool, 
+                                        device=pillar_features.device)
 
-        updated_features = torch.zeros_like(pillar_features)
-        for batch_idx in range(batch_size):
-            batch_mask = coords[:, 0] == batch_idx
-            if not batch_mask.any():
-                continue
+            # Veriyi düz listeden batch formatına taşı (Bu işlem GPU'da hızlıdır)
+            for b in range(batch_size):
+                mask = coords[:, 0] == b
+                num_p = pillar_counts[b]
+                padded_features[b, :num_p] = pillar_features[mask]
+                key_padding_mask[b, :num_p] = False # Dolu sütunları maskeden çıkar
 
-            features = pillar_features[batch_mask].unsqueeze(0)
-            features = self.pre_mlp(features)
-            attn_out, _ = self.attn(features, features, features, need_weights=False)
-            if self.norm1 is not None:
-                features = self.norm1(features + attn_out)
-            else:
-                features = features + attn_out
+            # 5. DEĞİŞİKLİK: ATTENTION İŞLEMİ (Tek Seferde)
+            x = self.pre_mlp(padded_features)
+            
+            # key_padding_mask: Modelin sadece gerçek noktalara odaklanmasını sağlar
+            attn_out, _ = self.attn(x, x, x, key_padding_mask=key_padding_mask)
+            x = self.norm1(x + attn_out)
 
-            ffn_out = self.ffn(features)
-            if self.norm2 is not None:
-                features = self.norm2(features + ffn_out)
-            else:
-                features = features + ffn_out
+            # Feed Forward Network
+            ffn_out = self.ffn(x)
+            x = self.norm2(x + ffn_out)
 
-            features = self.post_mlp(features)
-            updated_features[batch_mask] = features.squeeze(0)
+            # Post-MLP: E→C (Paper Figure 3)
+            x = self.post_mlp(x)
 
-        batch_dict['pillar_features'] = updated_features
-        return batch_dict
+            # 6. DEĞİŞİKLİK: SONUCU ESKİ FORMATA (LIST) GERİ DÖNDÜRME
+            # Padding'leri atıp tekrar OpenPCDet'in beklediği (num_pillars, C) haline getiriyoruz
+            updated_features = []
+            for b in range(batch_size):
+                updated_features.append(x[b, :pillar_counts[b]])
+                
+            batch_dict['pillar_features'] = torch.cat(updated_features, dim=0)
+            return batch_dict
