@@ -1,5 +1,0 @@
-tools/cfgs/vod_models/vod_radarpillar_noflip_boxloss.yaml
-tools/cfgs/vod_models/vod_radarpillar_noflip_voxel008.yaml
-tools/cfgs/vod_models/vod_radarpillar_noflip_postproc.yaml
-tools/cfgs/vod_models/vod_radarpillar_noflip_stepdecay.yaml
-tools/cfgs/vod_models/vod_radarpillar_noflip_combo_boxquality.yaml
