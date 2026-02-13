@@ -20,6 +20,7 @@ bağımlılıkları kaldırıldı ve radar hız/rcs özellikleri eklendi.
 - [Installation](docs/INSTALL.md)
 - [Quick Demo](docs/DEMO.md)
 - [Getting Started](docs/GETTING_STARTED.md)
+- [Velocity Normalizasyonu](#velocity-normalizasyonu-analizi)
 - [Citation](#citation)
 
 
@@ -134,6 +135,60 @@ VoD datasetindeki Cyclist sınıfı, `bicycle`, `rider`, `motor`, `moped_scooter
 | **2peakcyclist** (çift anchor) | 33.60 | **35.99** | **20.30** | **27.67** |
 
 > Cyclist: 18.08 → 20.30 (+2.22 AP, +%12.3) | Recall@0.3: 0.40 → 0.47
+
+### Velocity Normalizasyonu Analizi
+
+Modele giren `v_r_comp` (ego-motion compensated radial velocity) değeri, VFE katmanında kartezyen bileşenlerine ayrıştırılır:
+```
+phi = atan2(y, x)
+vx = v_r_comp * cos(phi)
+vy = v_r_comp * sin(phi)
+```
+
+Normalizasyon bu bileşenleri `(değer - μ) / σ` ile ölçekler. Ancak config'teki mean/std değerleri gerçek veri dağılımıyla uyuşmuyordu:
+
+| Parametre | Config (eski) | Gerçek veri | Oran |
+|---|---|---|---|
+| vx std | 0.891 | **1.847** | 0.48x |
+| vy std | 0.453 | **0.944** | 0.48x |
+
+Config'teki std değerleri gerçek std'nin yarısı olduğu için normalizasyon, dağılımı sıkıştırmak yerine **genişletiyordu** (amplifikasyon).
+
+#### v_r_comp Normalizasyon Karşılaştırması
+
+![Velocity Norm Comparison](docs/visualizations/velocity_norm_comparison.png)
+
+| | σ (std) | Outlier oranı (\|v\|>3) |
+|---|---|---|
+| Ham | 2.075 | %4.1 |
+| Config Norm (σ=0.89) | 2.328 | **%4.7 (arttı)** |
+| Doğru Norm (σ=2.08) | 1.000 | **%1.4 (azaldı)** |
+
+Config normalizasyonu outlier'ları azaltmak yerine artırıyor. Doğru mean/std değerleri:
+```yaml
+VELOCITY_COMP_MEAN: [0.0788, -0.0194]
+VELOCITY_COMP_STD:  [1.8466, 0.9439]
+```
+
+#### 2D Dağılım: Ham vs Config Norm vs Doğru Norm
+
+![Velocity 2D Comparison](docs/visualizations/velocity_norm_2d_comparison.png)
+
+Üst satır: vy histogramı. Alt satır: vx-vy heatmap (log-scale), mavi daire = 3σ sınırı.
+- **Config norm**: 3σ dairesi dışı %5.8 — ham halden (%4.1) bile kötü
+- **Doğru norm**: 3σ dairesi dışı %2.1 — outlier'lar gerçekten azalıyor
+
+#### Normalizasyon ON vs OFF Eğitim Sonuçları (e128 vs e128_tek_norm)
+
+Yanlış std değerleriyle bile normalizasyon açık olması, kapalı olmaktan daha iyi sonuç verdi (vx/vy dengesini sağladığı için):
+
+| Sınıf | Norm ON (e128) | Norm OFF (e128_tek_norm) | Fark |
+|---|---|---|---|
+| Car | 35.27 | 35.00 | +0.27 |
+| Ped | 34.27 | 33.17 | **+1.10** |
+| Cyc | 19.48 | 18.76 | **+0.72** |
+
+> Doğru std değerleriyle normalizasyon daha da etkili olacaktır.
 
 ### 3D AP Evolution (2peakcyclist, Epoch 30-40)
 

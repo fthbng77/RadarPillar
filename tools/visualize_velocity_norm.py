@@ -10,7 +10,7 @@ from pathlib import Path
 DATA_ROOT = Path('./data/VoD/view_of_delft_PUBLIC/radar_5frames')
 
 # Config'teki normalizasyon parametreleri
-MEAN_VX, MEAN_VY = 0.020094, -0.003165
+MEAN_VX, MEAN_VY = 0.079, -0.003165
 STD_VX, STD_VY = 0.891514, 0.452536
 
 # VoD radar feature sırası: [x, y, z, rcs, v_r, v_r_comp, time]
