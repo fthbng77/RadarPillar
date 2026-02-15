@@ -110,10 +110,10 @@ def main():
         if wandb is None:
             raise ImportError('Please install wandb using "pip install wandb"')
         wandb.init(
-            project='astyx-RadarPillar' if args.extra_tag == 'default' else args.extra_tag,
-            name=cfg.TAG,
+            project='RadarPillar',
+            name='%s/%s' % (cfg.TAG, args.extra_tag),
             config=cfg,
-            sync_tensorboard=True  # Optional: sync tensorboard logs to wandb automatically
+            sync_tensorboard=True
         )
 
     # -----------------------create dataloader & network & optimizer---------------------------
