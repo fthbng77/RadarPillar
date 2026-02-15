@@ -16,13 +16,7 @@ INFO_PATH: {
 FOV_POINTS_ONLY: True
 
 CLASS_MAPPINGS: {
-    'bicycle': 'Cyclist',
-    'rider': 'Cyclist',
     'Cyclist': 'Cyclist',
-    'moped_scooter': 'Cyclist',
-    'motor': 'Cyclist',
-    'ride_other': 'Cyclist',
-    'ride_uncertain': 'Cyclist'
 }
 
 POINT_FEATURE_ENCODING: {
