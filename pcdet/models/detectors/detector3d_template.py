@@ -214,7 +214,7 @@ class Detector3DTemplate(nn.Module):
             if post_process_cfg.NMS_CONFIG.MULTI_CLASSES_NMS:
                 if not isinstance(cls_preds, list):
                     cls_preds = [cls_preds]
-                    multihead_label_mapping = [torch.arange(1, self.num_class, device=cls_preds[0].device)]
+                    multihead_label_mapping = [torch.arange(1, self.num_class + 1, device=cls_preds[0].device)]
                 else:
                     multihead_label_mapping = batch_dict['multihead_label_mapping']
 

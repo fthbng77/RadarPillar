@@ -44,11 +44,10 @@ class DataAugmentor(object):
         if data_dict is None:
             return partial(self.random_world_flip, config=config)
         gt_boxes, points = data_dict['gt_boxes'], data_dict['points']
-        point_velocity_indices = config.get('POINT_VELOCITY_INDICES', config.get('POINT_VELOCITY_INDEX', None))
         for cur_axis in config['ALONG_AXIS_LIST']:
             assert cur_axis in ['x', 'y']
             gt_boxes, points = getattr(augmentor_utils, 'random_flip_along_%s' % cur_axis)(
-                gt_boxes, points, point_velocity_indices=point_velocity_indices
+                gt_boxes, points
             )
 
         data_dict['gt_boxes'] = gt_boxes
@@ -61,12 +60,10 @@ class DataAugmentor(object):
         rot_range = config['WORLD_ROT_ANGLE']
         if not isinstance(rot_range, list):
             rot_range = [-rot_range, rot_range]
-        point_velocity_indices = config.get('POINT_VELOCITY_INDICES', config.get('POINT_VELOCITY_INDEX', None))
         gt_boxes, points = augmentor_utils.global_rotation(
             data_dict['gt_boxes'],
             data_dict['points'],
-            rot_range=rot_range,
-            point_velocity_indices=point_velocity_indices
+            rot_range=rot_range
         )
 
         data_dict['gt_boxes'] = gt_boxes
