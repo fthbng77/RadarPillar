@@ -31,8 +31,6 @@ DATA_CONFIG:
               WORLD_ROT_ANGLE: [-0.78539816, 0.78539816]
             - NAME: random_world_scaling
               WORLD_SCALE_RANGE: [0.95, 1.05]
-
-
 MODEL:
     NAME: PointPillar
 
@@ -99,7 +97,7 @@ MODEL:
             },
             {
                 'class_name': 'Cyclist',
-                'anchor_sizes': [[1.94, 0.79, 1.75]],
+                'anchor_sizes': [[1.76, 0.6, 1.73]],
                 'anchor_rotations': [0, 1.57],
                 'anchor_bottom_heights': [-0.6],
                 'align_center': False,
@@ -143,7 +141,7 @@ MODEL:
 OPTIMIZATION:
     FIX_RANDOM_SEED: True
     BATCH_SIZE_PER_GPU: 16
-    NUM_EPOCHS: 40
+    NUM_EPOCHS: 60
     eval_interval: 1
     early_stop:
         enabled: True
@@ -157,7 +155,7 @@ OPTIMIZATION:
         save_best: True
 
     OPTIMIZER: adam_onecycle
-    LR: 0.003
+    LR: 0.01
     WEIGHT_DECAY: 0.01
     MOMENTUM: 0.9
 
