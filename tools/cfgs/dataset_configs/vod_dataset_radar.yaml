@@ -16,39 +16,26 @@ INFO_PATH: {
 FOV_POINTS_ONLY: True
 
 CLASS_MAPPINGS: {
-    'bicycle': 'Cyclist',
-    'rider': 'Cyclist',
     'Cyclist': 'Cyclist',
-    'moped_scooter': 'Cyclist',
-    'motor': 'Cyclist',
-    'ride_other': 'Cyclist',
-    'ride_uncertain': 'Cyclist'
-}
-
-POINT_FEATURE_ENCODING: {
-    encoding_type: absolute_coordinates_encoding,
-    used_feature_list: ['x', 'y', 'z', 'rcs', 'v_r', 'v_r_comp', 'time'],
-    src_feature_list: ['x', 'y', 'z', 'rcs', 'v_r', 'v_r_comp', 'time'],
 }
 
 POINT_FEATURE_NORMALIZATION: {
-    USE_NORM: True,
-    MEAN: [0.0, 0.0, 0.0, -12.4070, -3.1957, 0.0387, -1.9943],
-    STD: [1.0, 1.0, 1.0, 13.9321, 2.7279, 2.0727, 1.4141],
+    USE_NORM: False,
 }
 
 DATA_AUGMENTOR:
-    DISABLE_AUG_LIST: ['random_world_rotation']
+    DISABLE_AUG_LIST: ['placeholder']
     AUG_CONFIG_LIST:
         - NAME: gt_sampling
           USE_ROAD_PLANE: False
           DB_INFO_PATH:
               - vod_dbinfos_train.pkl
           PREPARE: {
-             filter_by_min_points: ['Car:3', 'Pedestrian:2', 'Cyclist:2'],
+             filter_by_min_points: ['Car:5', 'Pedestrian:5', 'Cyclist:5'],
+             filter_by_difficulty: [-1],
           }
 
-          SAMPLE_GROUPS: ['Car:15','Pedestrian:10', 'Cyclist:10']
+          SAMPLE_GROUPS: ['Car:20','Pedestrian:15', 'Cyclist:15']
           NUM_POINT_FEATURES: 7
           DATABASE_WITH_FAKELIDAR: False
           REMOVE_EXTRA_WIDTH: [0.0, 0.0, 0.0]
@@ -57,9 +44,17 @@ DATA_AUGMENTOR:
         - NAME: random_world_flip
           ALONG_AXIS_LIST: ['x']
 
+        - NAME: random_world_rotation
+          WORLD_ROT_ANGLE: [-0.78539816, 0.78539816]
+
         - NAME: random_world_scaling
           WORLD_SCALE_RANGE: [0.95, 1.05]
 
+POINT_FEATURE_ENCODING: {
+    encoding_type: absolute_coordinates_encoding,
+    used_feature_list: ['x', 'y', 'z', 'rcs', 'v_r', 'v_r_comp', 'time'],
+    src_feature_list: ['x', 'y', 'z', 'rcs', 'v_r', 'v_r_comp', 'time'],
+}
 
 DATA_PROCESSOR:
     - NAME: mask_points_and_boxes_outside_range

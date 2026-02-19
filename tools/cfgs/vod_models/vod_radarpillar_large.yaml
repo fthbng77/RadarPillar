@@ -31,6 +31,8 @@ DATA_CONFIG:
               WORLD_ROT_ANGLE: [-0.78539816, 0.78539816]
             - NAME: random_world_scaling
               WORLD_SCALE_RANGE: [0.95, 1.05]
+
+
 MODEL:
     NAME: PointPillar
 
@@ -43,27 +45,27 @@ MODEL:
         USE_REL_VELOCITY_DECOMPOSITION: False
         USE_VELOCITY_OFFSET: False
         USE_REL_VELOCITY_OFFSET: False
-        NUM_FILTERS: [32]
+        NUM_FILTERS: [64]
 
     BACKBONE_3D:
         NAME: PillarAttention
-        ATTN_CHANNELS: 32
+        ATTN_CHANNELS: 64
         NUM_HEADS: 1
         DROPOUT: 0.0
-        FFN_CHANNELS: 32
+        FFN_CHANNELS: 64
         USE_LAYER_NORM: True
 
     MAP_TO_BEV:
         NAME: PointPillarScatter
-        NUM_BEV_FEATURES: 32
+        NUM_BEV_FEATURES: 64
 
     BACKBONE_2D:
         NAME: BaseBEVBackbone
         LAYER_NUMS: [3, 5, 5]
         LAYER_STRIDES: [2, 2, 2]
-        NUM_FILTERS: [32, 32, 32]
+        NUM_FILTERS: [64, 128, 256]
         UPSAMPLE_STRIDES: [1, 2, 4]
-        NUM_UPSAMPLE_FILTERS: [32, 32, 32]
+        NUM_UPSAMPLE_FILTERS: [128, 128, 128]
 
     DENSE_HEAD:
         NAME: AnchorHeadSingle
@@ -97,7 +99,7 @@ MODEL:
             },
             {
                 'class_name': 'Cyclist',
-                'anchor_sizes': [[1.76, 0.6, 1.73]],
+                'anchor_sizes': [[1.94, 0.79, 1.75]],
                 'anchor_rotations': [0, 1.57],
                 'anchor_bottom_heights': [-0.6],
                 'align_center': False,
@@ -141,7 +143,7 @@ MODEL:
 OPTIMIZATION:
     FIX_RANDOM_SEED: True
     BATCH_SIZE_PER_GPU: 16
-    NUM_EPOCHS: 60
+    NUM_EPOCHS: 40
     eval_interval: 1
     early_stop:
         enabled: True
@@ -155,7 +157,7 @@ OPTIMIZATION:
         save_best: True
 
     OPTIMIZER: adam_onecycle
-    LR: 0.01
+    LR: 0.003
     WEIGHT_DECAY: 0.01
     MOMENTUM: 0.9
 
