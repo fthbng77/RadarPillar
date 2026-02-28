@@ -155,36 +155,32 @@ VoD's Cyclist class contains diverse sub-types (bicycle, rider, motor, moped). A
 
 ---
 
-### Ablation Studies
+### Ablation: Velocity Decomposition
 
-#### Augmentor Bug Fix
+The main ablation compares the **default** pipeline (raw v_r_comp feature) against **velocity decomposition** (v_r_comp → vx, vy via azimuth angle). Both experiments use the same config, training schedule, and data augmentation.
 
-| Experiment | Config | Car 3D | Ped 3D | Cyclist 3D |
-|---|---|:---:|:---:|:---:|
-| boxq_v7 (flip off, buggy) | Single anchor, NMS=0.05 | 38.58 | 0.60 | 0.00 |
-| **return_v5** (flip on, bug fixed) | Single anchor, NMS=0.01 | 35.35 | **31.99** | **17.65** |
-
-> Pedestrian: 0.60 → 32.00 | Cyclist: 0.00 → 17.65
-
-#### Dual Cyclist Anchor
-
-| Experiment | Car 3D | Ped 3D | Cyclist 3D | Weighted Mean |
+| Configuration | Car | Ped | Cyc | mAP |
 |---|:---:|:---:|:---:|:---:|
-| return_v5_epoch80 (single anchor) | 34.31 | 34.32 | 18.08 | 26.20 |
-| **2peakcyclist** (dual anchor) | 33.60 | **35.99** | **20.30** | **27.67** |
+| Default — no decomposition (e58) | **36.29** | **41.09** | 68.90 | **48.76** |
+| Velocity decomposition (e56) | 35.43 | 39.96 | **70.76** | 48.72 |
+| Delta | -0.86 | -1.13 | **+1.86** | -0.04 |
 
-> Cyclist: 18.08 → 20.30 (+2.22 AP, +12.3%) | Recall@0.3: 0.40 → 0.47
+**Key findings:**
+- Velocity decomposition significantly boosts **Cyclist AP** (+1.86), likely because directional velocity helps distinguish moving two-wheelers
+- Car and Pedestrian show a slight decrease, suggesting the additional features may add noise for these classes
+- Overall mAP is nearly identical (-0.04), indicating a class-level trade-off rather than a net gain
+- The original paper reports +3.8 mAP from decomposition; our smaller gain may be because we retain raw v_r, v_r_comp and time as input features alongside vx/vy, causing partial redundancy
 
-#### Velocity Normalization Analysis
+### Velocity Normalization Analysis
 
-The `v_r_comp` value is decomposed into vx, vy in the VFE layer. Normalization scales these via `(value - μ) / σ`. However, the config's mean/std values didn't match the actual data distribution:
+The decomposed vx/vy components are optionally normalized via `(value - μ) / σ`. Analysis revealed that the config's std values were roughly **half** the actual data distribution:
 
 | Parameter | Config (old) | Actual Data | Ratio |
 |---|:---:|:---:|:---:|
-| vx std | 0.891 | **1.847** | 0.48x |
-| vy std | 0.453 | **0.944** | 0.48x |
+| vx std | 0.891 | **2.080** | 0.43x |
+| vy std | 0.453 | **1.051** | 0.43x |
 
-Since config std was half the actual std, normalization was **amplifying** the distribution instead of compressing it.
+Since config std was too small, normalization was **amplifying** the distribution instead of compressing it:
 
 <p align="center">
   <img src="docs/visualizations/velocity_norm_comparison.png" width="90%" alt="Velocity Normalization Comparison">
@@ -198,19 +194,9 @@ Since config std was half the actual std, normalization was **amplifying** the d
 
 | | σ (std) | Outlier ratio (\|v\|>3) |
 |---|:---:|:---:|
-| Raw | 2.075 | 4.1% |
-| Config Norm (σ=0.89) | 2.328 | **4.7% (increased)** |
-| Correct Norm (σ=2.08) | 1.000 | **1.4% (decreased)** |
-
-#### Normalization ON vs OFF Training Results
-
-Even with incorrect std values, normalization ON outperforms OFF (vx/vy balance effect):
-
-| Class | Norm ON (e128) | Norm OFF (e128_tek_norm) | Diff |
-|---|:---:|:---:|:---:|
-| Car | 35.27 | 35.00 | +0.27 |
-| Ped | 34.27 | 33.17 | **+1.10** |
-| Cyc | 19.48 | 18.76 | **+0.72** |
+| Raw | 2.075 | 4.4% |
+| Config Norm (σ=0.89) | 2.328 | **5.8% (increased)** |
+| Correct Norm (σ=2.08) | 1.000 | **2.3% (decreased)** |
 
 ---
 
