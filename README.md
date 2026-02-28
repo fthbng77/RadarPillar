@@ -48,43 +48,26 @@ This repository implements the **RadarPillars** architecture ([Gillen et al., IR
 
 ## Architecture
 
-<div align="center">
+```mermaid
+flowchart TD
+    A["<b>Radar Point Cloud</b><br/><i>(N, 7): x, y, z, RCS, v_r, v_r_comp, time</i>"]
+    B["<b>PillarVFE</b><br/><i>Voxelization + Velocity Decomposition</i><br/>vx = v_r · cos(φ), vy = v_r · sin(φ)"]
+    C["<b>PillarAttention</b><br/><i>Masked Multi-Head Self-Attention</i><br/>C=32, H=1, LayerNorm + FFN"]
+    D["<b>PointPillarScatter</b><br/><i>Sparse → Dense BEV Grid</i><br/>320 × 320 × 32"]
+    E["<b>BaseBEVBackbone</b><br/><i>3-layer 2D CNN + Multi-scale Upsample</i><br/>Filters: [32, 32, 32], Strides: [2, 2, 2]"]
+    F["<b>AnchorHeadSingle</b><br/><i>3 Classes + Direction Classifier + NMS</i><br/>Car | Pedestrian | Cyclist"]
+    G["<b>3D Bounding Boxes</b><br/><i>(x, y, z, dx, dy, dz, heading, score)</i>"]
 
+    A --> B --> C --> D --> E --> F --> G
+
+    style A fill:#2C3E50,color:#fff,stroke:#1a252f
+    style B fill:#2980B9,color:#fff,stroke:#1f6391
+    style C fill:#8E44AD,color:#fff,stroke:#6c3483
+    style D fill:#27AE60,color:#fff,stroke:#1e8449
+    style E fill:#E67E22,color:#fff,stroke:#ba6418
+    style F fill:#C0392B,color:#fff,stroke:#96281b
+    style G fill:#2C3E50,color:#fff,stroke:#1a252f
 ```
-Input: Radar Point Cloud (N, 7)
-         │
-         ▼
-┌─────────────────────┐
-│  PillarVFE          │  Voxelization + Velocity Decomposition
-│  vr → vx, vy        │  φ = atan2(y, x), vx = vr·cos(φ), vy = vr·sin(φ)
-└─────────┬───────────┘
-          ▼
-┌─────────────────────┐
-│  PillarAttention     │  Global Self-Attention (C=32, H=1)
-│  + LayerNorm + FFN   │  with key padding mask for sparse radar
-└─────────┬───────────┘
-          ▼
-┌─────────────────────┐
-│  PointPillarScatter  │  Sparse-to-Dense BEV projection
-└─────────┬───────────┘
-          ▼
-┌─────────────────────┐
-│  BaseBEVBackbone     │  Multi-scale 2D CNN (3 layers, 32 channels)
-└─────────┬───────────┘
-          ▼
-┌─────────────────────┐
-│  AnchorHeadSingle    │  Anchor-based detection + Direction classifier
-└─────────┬───────────┘
-          ▼
-    3D Bounding Boxes
-```
-
-</div>
-
-<p align="center">
-  <img src="docs/model_framework.png" width="80%" alt="OpenPCDet Framework">
-  <br><em>OpenPCDet modular framework architecture</em>
-</p>
 
 ---
 
