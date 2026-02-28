@@ -350,12 +350,12 @@ python tools/plot_cyclist_dist.py    # Cyclist length histogram
 
 <p align="center">
   <img src="docs/visualizations/anchor_verification.png" width="80%" alt="Anchor Verification">
-  <br><em>Black cross = Baseline anchor (1.59m, centered on data). Blue diamond = Master anchor (1.94m, shifted from center)</em>
+  <br><em>GT size distributions with configured anchors — Car (4.17x1.84), Pedestrian (0.65x0.64), Cyclist (1.94x0.79)</em>
 </p>
 
 <p align="center">
   <img src="docs/visualizations/cyclist_dist.png" width="50%" alt="Cyclist Distribution">
-  <br><em>Bimodal cyclist distribution: stationary bicycles vs. moving riders</em>
+  <br><em>Cyclist length distribution (N=6685): mean=1.94m, median=1.94m — anchor aligns with data center</em>
 </p>
 
 ### AP Evolution Plots
