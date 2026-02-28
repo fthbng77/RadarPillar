@@ -1,0 +1,483 @@
+\documentclass[a4paper,11pt]{article}
+
+% --- Paketler ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[turkish]{babel}
+\usepackage{geometry}
+\geometry{margin=2.2cm}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{enumitem}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{tabularx}
+\usepackage{makecell}
+
+% --- Renk Tanımları ---
+\definecolor{bestcolor}{RGB}{34,139,34}
+\definecolor{ourscolor}{RGB}{0,90,180}
+\definecolor{headerblue}{RGB}{41,65,122}
+\definecolor{lightgray}{RGB}{245,245,245}
+\definecolor{rowalt}{RGB}{235,242,250}
+
+% --- Özel Komutlar ---
+\newcommand{\best}[1]{\textcolor{bestcolor}{\textbf{#1}}}
+\newcommand{\ours}[1]{\textcolor{ourscolor}{\textbf{#1}}}
+\newcommand{\gain}[1]{\textcolor{bestcolor}{+#1}}
+\newcommand{\loss}[1]{\textcolor{red}{#1}}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=headerblue,
+    urlcolor=headerblue,
+    citecolor=headerblue
+}
+
+% ============================================================
+\title{
+    \vspace{-1cm}
+    \textbf{Güncel Literatür Karşılaştırması:\\
+    4D Radar Tabanlı 3B Nesne Algılama\\View-of-Delft Veri Seti Üzerinde}\\[0.5em]
+    \large Dahili Teknik Rapor -- RadarPillar Projesi
+}
+\author{Xena Vision}
+\date{Şubat 2026}
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+% ============================================================
+\section{Giriş}
+
+Bu doküman, View-of-Delft (VoD) veri seti üzerinde değerlendirilen yalnızca radar tabanlı 3B nesne algılama yöntemlerinin kapsamlı bir karşılaştırmasını sunmaktadır. Analiz, 2021--2025 yılları arasında yayımlanan güncel yöntemleri, mimari yeniliklerini ve RadarPillar implementasyonumuza uygulanabilecek potansiyel iyileştirmeleri kapsamaktadır.
+
+VoD veri seti, kentsel trafikte senkronize edilmiş 64 katmanlı LiDAR, stereo kamera ve 3+1D radar verisi içeren 8.693 çerçeveden oluşmakta olup 123.106 adet 3B sınırlayıcı kutu anotasyonu barındırmaktadır. Değerlendirme, doğrulama (validation) bölümü üzerinde iki farklı bölge için yapılmaktadır:
+\begin{itemize}[nosep]
+    \item \textbf{Tüm Anotasyonlu Alan (Entire Annotated Area -- EAA)}: Sensörün tam kapsama alanı
+    \item \textbf{Sürüş Koridoru (Driving Corridor -- DC)}: Kısıtlanmış yol bölgesi ($0 < x < 25$\,m, $|y| < 4$\,m)
+\end{itemize}
+
+IoU eşikleri: Araba = 0{,}50, Yaya = 0{,}25, Bisikletli = 0{,}25.
+
+% ============================================================
+\section{VoD Karşılaştırması: Tüm Anotasyonlu Alan}
+
+\begin{table}[H]
+\centering
+\caption{VoD üzerinde yalnızca radar tabanlı 3B nesne algılama sonuçları -- Tüm Anotasyonlu Alan (3D AP \%).
+Yöntemler mAP'a göre sıralanmıştır. \best{Yeşil} = sütundaki en iyi, \ours{Mavi} = bizim sonuçlarımız.}
+\label{tab:eaa}
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{@{}clcccccc@{}}
+\toprule
+\textbf{Sıra} & \textbf{Yöntem} & \textbf{Yıl} & \textbf{Araba} & \textbf{Yaya} & \textbf{Bisikletli} & \textbf{mAP} & \textbf{Çerçeve} \\
+\midrule
+1  & MAFF-Net \cite{maffnet}                & 2025 RA-L  & 42{,}3          & \best{46{,}8}   & \best{74{,}7}   & \best{54{,}6}  & -- \\
+2  & SCKD \cite{sckd}                       & 2025 AAAI  & 41{,}89         & 43{,}51         & 70{,}83         & 52{,}08        & 5 \\
+3  & RadarGaussianDet3D \cite{rgd3d}        & 2025       & 40{,}7          & 42{,}4          & 73{,}0          & 52{,}0         & 5 \\
+4  & PSTOPS \cite{pstops}                   & 2025       & --              & --              & --              & 50{,}99        & 5 \\
+5  & SMURF \cite{smurf}                     & 2023 TIV   & \best{42{,}31}  & 39{,}09         & 71{,}50         & 50{,}97        & 5 \\
+6  & RadarPillars (makale) \cite{radarpillars}& 2024 IROS & 41{,}1          & 38{,}6          & 72{,}6          & 50{,}70        & 5 \\
+7  & RadarNeXt \cite{radarnext}             & 2025       & 37{,}44         & 41{,}83         & 72{,}16         & 50{,}48        & 1 \\
+8  & MUFASA \cite{mufasa}                   & 2024 ICANN & 43{,}10         & 38{,}97         & 68{,}65         & 50{,}24        & 5 \\
+9  & SMIFormer \cite{smiformer}             & 2023       & 39{,}53         & 41{,}88         & 64{,}91         & 48{,}77        & 5 \\
+\rowcolor{rowalt}
+10 & \ours{Bizim (default, en iyi)}         & --         & \ours{39{,}2}   & \ours{42{,}6}   & \ours{68{,}4}   & \ours{49{,}9}  & 5 \\
+\rowcolor{rowalt}
+11 & \ours{Bizim (vel.\ decomp, en iyi)}    & --         & \ours{38{,}7}   & \ours{41{,}8}   & \ours{69{,}8}   & \ours{49{,}9}  & 5 \\
+12 & CenterPoint (temel)                    & --         & 33{,}87         & 39{,}01         & 66{,}85         & 46{,}58        & 5 \\
+13 & PointPillars (temel)                   & --         & 37{,}92         & 31{,}24         & 65{,}66         & 44{,}94        & 5 \\
+14 & RPFA-Net \cite{rpfanet}                & 2021 ITSC  & 33{,}45         & 26{,}42         & 56{,}34         & 38{,}75        & 5 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ============================================================
+\section{VoD Karşılaştırması: Sürüş Koridoru}
+
+\begin{table}[H]
+\centering
+\caption{VoD üzerinde yalnızca radar tabanlı 3B nesne algılama sonuçları -- Sürüş Koridoru (3D AP \%).}
+\label{tab:dc}
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{@{}clccccc@{}}
+\toprule
+\textbf{Sıra} & \textbf{Yöntem} & \textbf{Yıl} & \textbf{Araba} & \textbf{Yaya} & \textbf{Bisikletli} & \textbf{mAP} \\
+\midrule
+1  & MAFF-Net \cite{maffnet}                & 2025 RA-L  & 72{,}3          & \best{57{,}8}   & 87{,}4          & \best{72{,}5} \\
+2  & SCKD \cite{sckd}                       & 2025 AAAI  & \best{77{,}54}  & 51{,}06         & 86{,}89         & 71{,}80 \\
+3  & PSTOPS \cite{pstops}                   & 2025       & --              & --              & --              & 71{,}55 \\
+4  & RadarGaussianDet3D \cite{rgd3d}        & 2025       & 71{,}2          & 51{,}7          & \best{89{,}0}   & 70{,}6 \\
+5  & RadarPillars (makale) \cite{radarpillars}& 2024 IROS & 71{,}1          & 52{,}3          & 87{,}9          & 70{,}5 \\
+6  & MUFASA \cite{mufasa}                   & 2024 ICANN & 72{,}50         & 50{,}28         & 88{,}51         & 70{,}43 \\
+7  & SMURF \cite{smurf}                     & 2023 TIV   & 71{,}74         & 50{,}54         & 86{,}87         & 69{,}72 \\
+8  & SMIFormer \cite{smiformer}             & 2023       & 77{,}04         & 53{,}40         & 82{,}95         & 71{,}13 \\
+9  & PointPillars (temel)                   & --         & 71{,}41         & 42{,}27         & 87{,}68         & 67{,}12 \\
+10 & CenterPoint (temel)                    & --         & 62{,}98         & 49{,}22         & 85{,}35         & 65{,}85 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ============================================================
+\section{Sonuçlarımız ve RadarPillars Makalesi Karşılaştırması}
+
+\begin{table}[H]
+\centering
+\caption{Eğitim sonuçlarımızın RadarPillars makalesiyle detaylı karşılaştırması (Tüm Alan, 3D AP \%).}
+\label{tab:ours_vs_paper}
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Konfigürasyon} & \textbf{Araba} & \textbf{Yaya} & \textbf{Bisikletli} & \textbf{mAP} \\
+\midrule
+RadarPillars makale (5 çerçeve)     & 41{,}1          & 38{,}6                      & \textbf{72{,}6} & \textbf{50{,}7} \\
+\midrule
+Bizim -- default (en iyi epoch)     & 39{,}2          & \textbf{42{,}6} \gain{4{,}0}   & 68{,}4          & 49{,}9 \\
+Bizim -- vel.\ decomp (en iyi epoch) & 38{,}7         & 41{,}8 \gain{3{,}2}            & 69{,}8          & 49{,}9 \\
+\midrule
+\multicolumn{5}{@{}l}{\textit{Makaleye göre sınıf bazlı fark:}} \\
+\quad default                       & \loss{$-$1{,}9} & \gain{4{,}0}                & \loss{$-$4{,}2} & \loss{$-$0{,}8} \\
+\quad vel.\ decomp                  & \loss{$-$2{,}4} & \gain{3{,}2}                & \loss{$-$2{,}8} & \loss{$-$0{,}8} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+\textbf{Temel gözlemler:}
+\begin{itemize}[nosep]
+    \item Yaya algılama, makaleyi +3{,}2 ile +4{,}0 AP arasında \textbf{geçmektedir}.
+    \item Bisikletli algılama en büyük açığı oluşturmaktadır ($-$2{,}8 ile $-$4{,}2 AP).
+    \item Genel mAP farkı yalnızca $-$0{,}8 olup makale performansına yakın konumdayız.
+\end{itemize}
+
+% ============================================================
+\section{Konfigürasyon Farkları: İmplementasyonumuz ve Makale}
+
+\begin{table}[H]
+\centering
+\caption{RadarPillars makalesi ile implementasyonumuz arasındaki hiperparametre karşılaştırması.}
+\label{tab:config_diff}
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{@{}lccl@{}}
+\toprule
+\textbf{Parametre} & \textbf{Makale} & \textbf{Bizim} & \textbf{Etki} \\
+\midrule
+Maks.\ Öğrenme Oranı     & 0{,}003  & 0{,}01  & 3{,}33$\times$ daha yüksek \\
+Başlangıç Öğrenme Oranı  & 0{,}0003 & 0{,}001 & 3{,}33$\times$ daha yüksek \\
+Yığın Boyutu (Batch)     & 8        & 16      & 2$\times$ daha büyük \\
+Girdi Özellikleri         & x,y,z,RCS,v$_{x}$,v$_{y}$ & x,y,z,RCS,v$_r$,v$_{r,comp}$,time,v$_x$,v$_y$ & 3 fazla özellik \\
+Veri Artırma              & çevirme + ölçekleme & çevirme + döndürme + ölçekleme & Fazla döndürme \\
+Zaman Özelliği            & Kullanılmıyor & Kullanılıyor & Ek girdi \\
+Dikkat Boyutu (E)         & 32 (hız) / 128 (hassasiyet) & 32 & Daha düşük kapasite \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ============================================================
+\section{Güncel Yöntemlerin Detaylı Analizi}
+
+Bu bölüm, en yüksek performanslı yöntemlerin mimari yeniliklerini ve RadarPillar hattımıza uygulanabilirliklerini detaylandırmaktadır.
+
+% --- 6.1 MAFF-Net ---
+\subsection{MAFF-Net (mAP 54{,}6 -- Güncel En İyi)}
+
+MAFF-Net \cite{maffnet}, VoD üzerinde raporlanan en yüksek yalnızca radar mAP değerine iki özgün modül ile ulaşmaktadır:
+
+\begin{itemize}[nosep]
+    \item \textbf{Seyreklik Pillar Dikkat Mekanizması (SPA -- Sparsity Pillar Attention):} Radar nokta bulutu seyrekliği için özel olarak tasarlanmış değiştirilmiş bir öz-dikkat mekanizmasıdır. Standart PillarAttention'dan farklı olarak SPA, radar dönüşlerinin düzensiz yoğunluk dağılımını yönetirken yeterli alıcı alanı (receptive field) korur.
+    \item \textbf{Küme Sorgu Çapraz Dikkat (CQCA -- Cluster Query Cross-Attention):} Noktalar Doppler hızına göre kümelenerek hız-uyumlu gruplar oluşturulur. Bu kümeler, bir çapraz dikkat mekanizmasında sorgu (query) olarak kullanılır ve ağın nesne düzeyinde hareket kalıpları hakkında çıkarım yapmasını sağlar. Temel içgörü, benzer radyal hızları paylaşan noktaların büyük olasılıkla aynı hareketli nesneye ait olduğudur.
+\end{itemize}
+
+\noindent
+\textit{Uygulanabilirlik:} CQCA konsepti son derece ilgilidir --- hattımızda zaten dikkat öncesinde Doppler tabanlı kümeleme için kullanılabilecek hız bilgisi mevcuttur.
+
+% --- 6.2 RadarGaussianDet3D ---
+\subsection{RadarGaussianDet3D (mAP 52{,}0)}
+
+RadarGaussianDet3D \cite{rgd3d}, sert pillar ayrıştırmayı türevlenebilir Gaussian splatting yaklaşımıyla değiştirmektedir:
+
+\begin{itemize}[nosep]
+    \item \textbf{Nokta Gaussian Kodlayıcı (PGE):} Her radar noktası öğrenilebilir bir 3B Gaussian üretir. Bu Gaussian'lar BEV düzlemine yansıtılarak ayrık pillar sınırları olmadan pürüzsüz, sürekli özellik haritaları oluşturur.
+    \item \textbf{Kutu Gaussian Kaybı (BGL):} Tahmin edilen ve gerçek sınırlayıcı kutular 3B Gaussian dağılımlarına dönüştürülür. Kayıp, KL uzaklığı olarak hesaplanarak konum, boyut ve yönelimin birleşik optimizasyonunu sağlar.
+    \item \textbf{CenterHead:} Çapa bağımsız (anchor-free), merkez tabanlı algılama başlığı kullanır.
+\end{itemize}
+
+\noindent
+\textit{Uygulanabilirlik:} CenterHead doğrudan benimsenebilir (OpenPCDet'te mevcuttur). BGL ilginç bir kayıp fonksiyonu alternatifidir.
+
+% --- 6.3 SMURF ---
+\subsection{SMURF (mAP 50{,}97)}
+
+SMURF \cite{smurf}, çoklu temsil füzyonu için çift dallı bir mimari sunmaktadır:
+
+\begin{itemize}[nosep]
+    \item \textbf{KDE Dalı (Kernel Density Estimation):} Çok boyutlu Gaussian karışım dağılımları kullanarak uzamsal yoğunluk özelliklerini hesaplar. Bu, ayrık pillar özellikleriyle birlikte sürekli bir yoğunluk alanı sağlayarak radar seyrekliğini telafi eder.
+    \item \textbf{Çoklu Temsil Füzyonu:} Pillar özellikleri ve KDE yoğunluk özellikleri, algılama başlığından önce birleştirilerek tamamlayıcı uzamsal temsiller sağlar.
+\end{itemize}
+
+\noindent
+\textit{Uygulanabilirlik:} Mevcut pillar hattına paralel olarak minimal mimari değişiklikle bir KDE yoğunluk dalı eklenebilir.
+
+% --- 6.4 MUFASA ---
+\subsection{MUFASA (mAP 50{,}24)}
+
+MUFASA \cite{mufasa}, geometrik uzamsal farkındalık kavramını ortaya koymaktadır:
+
+\begin{itemize}[nosep]
+    \item \textbf{GeoSPA (Geometrik Uzamsal Kalıp Analizi):} KNN komşuları kullanarak her nokta için Lalonde geometrik tanımlayıcılarını hesaplar:
+    \begin{itemize}[nosep]
+        \item \textit{Dağınıklık} ($\sigma_s$ -- Scatterness): Yakın noktaların ne kadar dağınık olduğu
+        \item \textit{Doğrusallık} ($\sigma_l$ -- Linearness): Ne kadar doğrusal hizalı oldukları
+        \item \textit{Yüzeysellik} ($\sigma_f$ -- Surfaceness): Ne kadar düzlemsel oldukları
+    \end{itemize}
+    Bu tanımlayıcılar nokta başına ek özellikler olarak eklenir. \textbf{Ablasyon çalışması, yalnızca GeoSPA ile Yaya AP'nin +6{,}14 arttığını göstermektedir.}
+    \item \textbf{DEMVA:} BEV ve silindirik görünüm projeksiyonları üzerinde harici dikkat (external attention) mekanizması.
+\end{itemize}
+
+\noindent
+\textit{Uygulanabilirlik:} GeoSPA son derece uygulanabilirdir --- Lalonde özellikleri VFE aşamasında hesaplanarak mevcut nokta özelliklerine birleştirilebilir. Yaya AP'deki +6{,}14 kazanç bunu özellikle cazip kılmaktadır.
+
+% --- 6.5 RadarNeXt ---
+\subsection{RadarNeXt (mAP 50{,}48)}
+
+RadarNeXt \cite{radarnext}, verimli ön plan (foreground) güçlendirmesine odaklanmaktadır:
+
+\begin{itemize}[nosep]
+    \item \textbf{MDFEN (Çok Yollu Deformabl Ön Plan Güçlendirme Ağı):} Özellik füzyon boyun katmanında (neck) seçili konumlarda DCNv3 (Deformabl Konvolüsyon v3) kullanır. Bu, ön plan nesnelerinin etrafında uyarlanabilir örnekleme sağlar.
+    \item \textbf{Rep-DWC omurgası:} Verimli özellik çıkarımı için yeniden parametrelenmiş derinlik ayrılıklı konvolüsyon.
+    \item \textbf{CenterHead:} Çapa bağımsız algılama, özellikle yayalar için faydalıdır.
+\end{itemize}
+
+\noindent
+\textit{Uygulanabilirlik:} Boyun katmanında seçili konumlara DCNv3 eklemek düşük maliyetli, yüksek etkili bir değişikliktir.
+
+% --- 6.6 PSTOPS ---
+\subsection{PSTOPS (mAP 50{,}99)}
+
+PSTOPS \cite{pstops}, dikkat mekanizmasını ve etiket atamasını yeniden düşünmektedir:
+
+\begin{itemize}[nosep]
+    \item \textbf{Pencere Tabanlı Pillar Transformer:} Küresel öz-dikkati pencere tabanlı dikkatle (Swin Transformer benzeri) değiştirir, yönetilebilir hesaplama maliyetiyle uzun menzilli ilişkiler kurar.
+    \item \textbf{Dinamik Çapraz Etiket Ataması:} Çapraz şekilli bir bölgeden dinamik olarak pozitif örnekler atar, hem çapa tabanlı hem de merkez tabanlı yöntemlerde bulunan yetersiz pozitif örnek sorununu çözer.
+\end{itemize}
+
+\noindent
+\textit{Uygulanabilirlik:} Pencere tabanlı dikkat, PillarAttention'ımızın yerine geçebilir. Dinamik etiket ataması algılama başlığında iyileştirmedir.
+
+% --- 6.7 SCKD ---
+\subsection{SCKD (mAP 52{,}08)}
+
+SCKD \cite{sckd}, çapraz modalite bilgi damıtması (knowledge distillation) kullanmaktadır:
+
+\begin{itemize}[nosep]
+    \item \textbf{LiDAR--Radar Öğretmen:} Eğitim sırasında birleşik LiDAR+radar modeli öğretmen olarak görev yapar.
+    \item \textbf{Yarı denetimli:} Damıtma sırasında etiketlenmemiş veriden yararlanır.
+    \item \textbf{Yalnızca radar çıkarımı:} Test zamanında yalnızca radar gereklidir.
+\end{itemize}
+
+\noindent
+\textit{Uygulanabilirlik:} Mimariden bağımsızdır --- herhangi bir radar dedektörünün üzerine uygulanabilir. Yalnızca eğitim sırasında LiDAR verisi gerektirir.
+
+% ============================================================
+\section{Literatürden Temel Ablasyon Bulguları}
+
+\begin{table}[H]
+\centering
+\caption{Literatürdeki önemli ablasyon sonuçları: tekil tekniklerin etkisi.}
+\label{tab:ablations}
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{@{}llcc@{}}
+\toprule
+\textbf{Kaynak} & \textbf{Teknik} & \textbf{Temel mAP} & \textbf{Teknikle birlikte} \\
+\midrule
+RadarPillars & Hız ayrıştırma (v$_r$ $\to$ v$_x$, v$_y$)    & 39{,}5 & 43{,}3 (\gain{3{,}8}) \\
+RadarPillars & PillarAttention                                & 39{,}5 & 42{,}9 (\gain{3{,}4}) \\
+RadarPillars & Düzgün küçük omurga (32,32,32)                 & 39{,}5 & 42{,}0 (\gain{2{,}5}) \\
+MUFASA       & GeoSPA (Lalonde özellikleri)                    & 45{,}08 & 48{,}43 (\gain{3{,}35}) \\
+MUFASA       & GeoSPA -- yalnızca Yaya                        & 30{,}96 & 37{,}10 (\gain{6{,}14}) \\
+MUFASA       & DEMVA (harici dikkat)                           & 45{,}08 & 46{,}98 (\gain{1{,}90}) \\
+RadarNeXt    & Boyunda DCNv3 (pozisyon 4)                      & 48{,}15 & 50{,}48 (\gain{2{,}33}) \\
+SCKD         & Bilgi damıtması                                 & 41{,}70 & 52{,}08 (\gain{10{,}38}) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+\textbf{Temel çıkarım:} Küçük, hedefli değişiklikler (hız ayrıştırma, geometrik özellikler, deformabl konvolüsyonlar) her biri tek başına +2--4 mAP katkısı sağlayabilir. Bilgi damıtması en büyük tekil kazancı sağlamakta ancak LiDAR verisi gerektirmektedir.
+
+% ============================================================
+\section{Çapa Tabanlı ve Merkez Tabanlı Algılama Başlıkları}
+
+\begin{table}[H]
+\centering
+\caption{VoD üzerinde algılama başlığı türü karşılaştırması (Tüm Alan).}
+\label{tab:head_comparison}
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{@{}llcccc@{}}
+\toprule
+\textbf{Yöntem} & \textbf{Başlık Türü} & \textbf{Araba} & \textbf{Yaya} & \textbf{Bisikletli} & \textbf{mAP} \\
+\midrule
+PointPillars         & Çapa (SSD)             & 37{,}92 & 31{,}24 & 65{,}66 & 44{,}94 \\
+CenterPoint          & CenterHead             & 33{,}87 & 39{,}01 & 66{,}85 & 46{,}58 \\
+RadarPillars         & Çapa (SSD)             & 41{,}10 & 38{,}60 & 72{,}60 & 50{,}70 \\
+RadarNeXt            & CenterHead             & 37{,}44 & 41{,}83 & 72{,}16 & 50{,}48 \\
+RadarGaussianDet3D   & CenterHead             & 40{,}7  & 42{,}4  & 73{,}0  & 52{,}0 \\
+PSTOPS               & Dinamik çapraz etiket  & --      & --      & --      & 50{,}99 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+\textbf{Gözlem:} Merkez tabanlı başlıklar tutarlı olarak daha yüksek Yaya AP elde etmektedir (PointPillars $\to$ CenterPoint temelinde +7{,}8). Araba için çapa tabanlı başlıklar daha iyi performans gösterme eğilimindedir. Algılama başlığı seçimi hedef sınıf önceliklerine göre yapılmalıdır.
+
+% ============================================================
+\section{Önerilen İyileştirme Yol Haritası}
+
+Literatür analizine dayanarak, tahmini etki/çaba oranına göre sıralanmış aşamalı bir iyileştirme planı önerilmektedir:
+
+\begin{table}[H]
+\centering
+\caption{İyileştirme yol haritası: RadarPillar implementasyonumuza uygulanabilir teknikler.}
+\label{tab:roadmap}
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}clcccl@{}}
+\toprule
+\textbf{Aşama} & \textbf{Teknik} & \textbf{Kaynak} & \makecell{\textbf{Tah.\ mAP}\\\textbf{Kazanç}} & \textbf{Çaba} & \textbf{Birincil Fayda} \\
+\midrule
+\multirow{2}{*}{1} & CenterHead geçişi         & RadarNeXt  & +1$\sim$2 & Düşük       & Yaya \\
+                    & Boyunda DCNv3             & RadarNeXt  & +1$\sim$2 & Düşük--Orta & Bisikletli \\
+\midrule
+\multirow{2}{*}{2} & GeoSPA (Lalonde özl.)     & MUFASA     & +2$\sim$3 & Orta        & \textbf{Yaya (+6!)} \\
+                    & KDE yoğunluk dalı         & SMURF      & +1$\sim$2 & Orta        & Araba, Yaya \\
+\midrule
+\multirow{2}{*}{3} & Hız kümeleme + CQCA       & MAFF-Net   & +2$\sim$4 & Yüksek      & Tüm sınıflar \\
+                    & LiDAR bilgi damıtması     & SCKD       & +3$\sim$4 & Yüksek      & Tüm sınıflar \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+\textbf{Tahmini kümülatif etki:} Yalnızca Aşama 1+2, mAP'ımızı ${\sim}$49{,}9'dan ${\sim}$52--53'e yükseltebilir ve güncel en iyi sonuçlara yaklaşabilir. Aşama 3 teknikleri eklemek 54 mAP'ın ötesine geçmeyi sağlayabilir.
+
+% ============================================================
+\section{Hız Ayrıştırma: Deney Sonuçlarımız}
+
+Hız ayrıştırma (v$_{r,\text{comp}}$ $\to$ v$_x$, v$_y$) üzerinde bir ablasyon çalışması gerçekleştirilmiştir:
+
+\begin{table}[H]
+\centering
+\caption{Hız ayrıştırmanın modelimiz üzerindeki etkisi (en iyi epoch, 3D AP \%).}
+\label{tab:veldecomp}
+\small
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{@{}lccccl@{}}
+\toprule
+\textbf{Konfigürasyon} & \textbf{Araba} & \textbf{Yaya} & \textbf{Bisikletli} & \textbf{mAP} & \textbf{En İyi Epoch} \\
+\midrule
+default (ayrıştırmasız)  & \textbf{39{,}21} & \textbf{42{,}58} & 68{,}38          & \textbf{49{,}93} & 54 \\
+velocity\_decomp         & 38{,}66          & 41{,}79          & \textbf{69{,}76} & 49{,}92          & 56 \\
+\midrule
+$\Delta$                 & \loss{$-$0{,}55} & \loss{$-$0{,}79} & \gain{1{,}38}    & $-$0{,}01        & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent
+Hız ayrıştırma, Bisikletli AP'yi +1{,}38 artırmakta ancak Araba ($-$0{,}55) ve Yaya ($-$0{,}79) değerlerini hafifçe düşürmektedir. Genel mAP neredeyse aynıdır. Makale, ayrıştırmadan +3{,}8 mAP kazanç raporlamaktadır; bizdeki daha küçük kazanç, ayrıştırılmış özelliklerle kısmen örtüşen ek ham hız özelliklerinin (v$_r$, v$_{r,\text{comp}}$, time) varlığından kaynaklanıyor olabilir.
+
+% ============================================================
+\section{Sonuç}
+
+RadarPillar implementasyonumuz, VoD veri setinde rekabetçi sonuçlar (mAP ${\sim}$49{,}9) elde ederek yalnızca radar yöntemleri arasında 8--9. sırada yer almakta ve orijinal makalenin raporladığı performansın 0{,}8 mAP dahilinde kalmaktadır. Ana açık Bisikletli ($-$2{,}8 ile $-$4{,}2 AP) ve Araba ($-$1{,}9 AP) sınıflarındayken, Yaya algılama makaleyi +3{,}2 ile +4{,}0 AP \textit{geçmektedir}.
+
+Güncel en iyi sonuca (MAFF-Net, 54{,}6 mAP) olan fark yaklaşık 4{,}7 mAP'tır. Literatür analizi, en etkili iyileştirmelerin şunlar olacağını ortaya koymaktadır:
+\begin{enumerate}[nosep]
+    \item \textbf{GeoSPA geometrik özellikleri} -- Yaya iyileştirmesi (+6 AP potansiyeli)
+    \item \textbf{CenterHead} -- Küçük nesne algılama iyileştirmesi
+    \item \textbf{Hız tabanlı kümeleme ile çapraz dikkat} -- Bütünsel iyileştirme
+    \item \textbf{LiDAR'dan bilgi damıtması} -- En büyük tekil kazanç
+\end{enumerate}
+
+% ============================================================
+\begin{thebibliography}{99}
+
+\bibitem{radarpillars}
+J.~Gillen, M.~Bieder ve C.~Stiller,
+``RadarPillars: Efficient Object Detection from 4D Radar Point Clouds,''
+\textit{Proc.\ IEEE/RSJ IROS}, 2024.
+\url{https://arxiv.org/abs/2408.05020}
+
+\bibitem{maffnet}
+J.~Sheng, S.~Guo, Y.~Zhou ve L.~Wang,
+``MAFF-Net: Enhancing 3D Object Detection with 4D Radar via Multi-Assist Feature Fusion,''
+\textit{IEEE RA-L}, 2025.
+\url{https://github.com/TRV-Lab/MAFF-Net}
+
+\bibitem{sckd}
+Y.~Wang, L.~Sun ve Z.~Deng,
+``SCKD: Semi-Supervised Cross-Modality Knowledge Distillation for 4D Radar Object Detection,''
+\textit{Proc.\ AAAI}, 2025.
+\url{https://arxiv.org/abs/2412.14571}
+
+\bibitem{rgd3d}
+T.~Zhang \textit{vd.},
+``RadarGaussianDet3D: An Efficient and Effective Gaussian-based 3D Detector with 4D Automotive Radars,''
+\textit{arXiv ön baskı}, 2025.
+\url{https://arxiv.org/abs/2509.16119}
+
+\bibitem{pstops}
+Z.~Li \textit{vd.},
+``Pillar-Based Adaptive Sparse Transformer with Cost-Optimized Positive Sample Selection for 4D Radar Object Detection,''
+\textit{Int.\ J.\ ITS Research}, 2025.
+
+\bibitem{smurf}
+J.~Liu, Z.~Zhao, D.~Tang ve Y.~Li,
+``SMURF: Spatial Multi-Representation Fusion for 3D Object Detection with 4D Imaging Radar,''
+\textit{IEEE T-IV}, 2023.
+\url{https://arxiv.org/abs/2307.10784}
+
+\bibitem{radarnext}
+X.~Li \textit{vd.},
+``RadarNeXt: Real-Time and Reliable 3D Object Detector Based On 4D mmWave Imaging Radar,''
+\textit{arXiv ön baskı}, 2025.
+\url{https://arxiv.org/abs/2501.02314}
+
+\bibitem{mufasa}
+B.~Li \textit{vd.},
+``MUFASA: Multi-View Fusion and Adaptation Network with Spatial Awareness for Radar Object Detection,''
+\textit{Proc.\ ICANN}, 2024.
+\url{https://arxiv.org/abs/2408.00565}
+
+\bibitem{smiformer}
+L.~Zhang \textit{vd.},
+``SMIFormer: Learning Spatial Feature Representation for 3D Object Detection from 4D Imaging Radar via Multi-View Interactive Transformers,''
+\textit{Sensors}, cilt~23, 2023.
+
+\bibitem{rpfanet}
+F.~Xu \textit{vd.},
+``RPFA-Net: a 4D RaDAR Pillar Feature Attention Network for 3D Object Detection,''
+\textit{Proc.\ IEEE ITSC}, 2021.
+
+\bibitem{lerojd}
+P.~Kammer \textit{vd.},
+``LEROjD: Lidar Extended Radar-Only Object Detection,''
+\textit{Proc.\ ECCV}, 2024.
+
+\end{thebibliography}
+
+\end{document}
