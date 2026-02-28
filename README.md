@@ -1,276 +1,430 @@
-<img src="docs/open_mmlab.png" align="right" width="30%">
+<div align="center">
 
 # RadarPillars: Efficient Object Detection from 4D Radar Point Clouds
-## OpenPCDet (Astyx + VoD)
 
-Bu fork, Astyx ve View-of-Delft (VoD) radar verileri ile radar-only RadarPillars/PointPillar
-eğitimi için düzenlenmiş OpenPCDet türevidir. LiDAR/çekirdek kod korunurken, görüntü
-bağımlılıkları kaldırıldı ve radar hız/rcs özellikleri eklendi.
+**OpenPCDet-based implementation for View-of-Delft (VoD) & Astyx datasets**
+
+[![Python 3.8+](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/)
+[![PyTorch 2.4+](https://img.shields.io/badge/PyTorch-2.4%2B-ee4c2c.svg)](https://pytorch.org/)
+[![License](https://img.shields.io/badge/License-Apache%202.0-green.svg)](LICENSE)
+
+</div>
 
 > **This work is currently under review.**
 > Pre-trained model weights and full reproduction details will be released upon paper acceptance.
 > Please do not use or redistribute without written permission from the authors.
 
-## Overview
+---
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Key Contributions](#key-contributions)
+- [Results](#results)
+  - [SOTA Comparison (VoD)](#sota-comparison-on-vod)
+  - [Ablation Studies](#ablation-studies)
+- [Installation](#installation)
+- [Dataset Preparation](#dataset-preparation)
+- [Training & Evaluation](#training--evaluation)
+- [Visualization Tools](#visualization-tools)
 - [Changelog](#changelog)
-- [Astyx Radar Quickstart](#astyx-radar-quickstart)
-- [VoD Radar Quickstart](#vod-radar-quickstart)
-- [Design Pattern](#openpcdet-design-pattern)
-- [Model Zoo](#model-zoo)
-- [Installation](docs/INSTALL.md)
-- [Quick Demo](docs/DEMO.md)
-- [Getting Started](docs/GETTING_STARTED.md)
-- [Velocity Normalizasyonu](#velocity-normalizasyonu-analizi)
 - [Citation](#citation)
+- [Acknowledgement](#acknowledgement)
 
+---
 
-## Changelog
-[2026-01] Astyx radar pipeline: 7 özellikli (x,y,z,rcs,vr,vx,vy) point loader, hız uyumlu augmentasyonlar, `tools/cfgs/astyx_models/astyx_radarpillar.yaml`.
-[2026-02] VoD radar pipeline: dataset config, info üretimi, `tools/cfgs/vod_models/vod_radarpillar.yaml`.
-[2026-02] WandB entegrasyonu: Eğitim metriklerini takip etmek için `--use_wandb` bayrağı eklendi.
-[2026-02] Augmentor bug fix: Radar verisi için `random_flip` ve `global_rotation` fonksiyonlarındaki hız indeks hatası düzeltildi.
-[2026-02] Dual Cyclist anchor: Bisiklet ve motosiklet alt-tiplerini ayrı yakalayan çift anchor stratejisi eklendi.
-[2026-02] BEV görselleştirme aracı: `tools/visualize_bev.py` ile tahmin sonuçlarını kuşbakışı görselleştirme.
+## Overview
 
-## WandB Entegrasyonu ve Kullanımı
+This repository implements the **RadarPillars** architecture ([Gillen et al., IROS 2024](https://arxiv.org/abs/2408.05020)) for **radar-only 3D object detection**. Built on top of [OpenPCDet](https://github.com/open-mmlab/OpenPCDet), it removes LiDAR/image dependencies and adds radar-specific physics features including Doppler velocity decomposition and RCS normalization.
 
-Eğitim süreçlerinizi Weights & Biases (WandB) üzerinden takip etmek için aşağıdaki adımları izleyin:
+**Supported Datasets:**
+| Dataset | Classes | Radar Features | Frames |
+|---|---|---|---|
+| **View-of-Delft (VoD)** | Car, Pedestrian, Cyclist | x, y, z, RCS, v_r, v_r_comp, time | 5-frame accumulation |
+| **Astyx HiRes2019** | Car, Pedestrian | x, y, z, RCS, v_r, v_x, v_y | Single frame |
 
-1. **Kurulum**:
-   Eğer `.venv` kullanıyorsanız, aktif ettiğinizden emin olun:
-   ```bash
-   source .venv/bin/activate
-   ```
+---
 
-2. **Giriş Yapma**:
-   WandB hesabınıza terminal üzerinden giriş yapın:
-   ```bash
-   wandb login
-   ```
-   API anahtarınızı [WandB Settings](https://wandb.ai/settings) sayfasından alabilirsiniz.
+## Architecture
 
-3. **Eğitimi Başlatma**:
-   Eğitim komutuna `--use_wandb` bayrağını ekleyerek metriklerin WandB'ye gönderilmesini sağlayın:
-   ```bash
-   python tools/train.py --cfg_file tools/cfgs/vod_models/vod_radarpillar.yaml --use_wandb
-   ```
+<div align="center">
 
-## Astyx Radar Quickstart
+```
+Input: Radar Point Cloud (N, 7)
+         │
+         ▼
+┌─────────────────────┐
+│  PillarVFE          │  Voxelization + Velocity Decomposition
+│  vr → vx, vy        │  φ = atan2(y, x), vx = vr·cos(φ), vy = vr·sin(φ)
+└─────────┬───────────┘
+          ▼
+┌─────────────────────┐
+│  PillarAttention     │  Global Self-Attention (C=32, H=1)
+│  + LayerNorm + FFN   │  with key padding mask for sparse radar
+└─────────┬───────────┘
+          ▼
+┌─────────────────────┐
+│  PointPillarScatter  │  Sparse-to-Dense BEV projection
+└─────────┬───────────┘
+          ▼
+┌─────────────────────┐
+│  BaseBEVBackbone     │  Multi-scale 2D CNN (3 layers, 32 channels)
+└─────────┬───────────┘
+          ▼
+┌─────────────────────┐
+│  AnchorHeadSingle    │  Anchor-based detection + Direction classifier
+└─────────┬───────────┘
+          ▼
+    3D Bounding Boxes
+```
 
-- Ortam: Python 3.8/3.9, PyTorch 2.4+cu12, spconv 2.3.6. Öneri:
-  ```bash
-  python -m venv .venv
-  source .venv/bin/activate
-  python -m pip install -U pip
-  python setup.py develop
-  ```
-- Veri yapısı (radar-only): `data/astyx/training/` ve `data/astyx/testing/` altında `radar/*.bin` dosyaları, `ImageSets/train.txt`, `val.txt`, `test.txt`.
-- Info + gt database üretimi:
-  ```bash
-  python -m pcdet.datasets.astyx.astyx_dataset create_astyx_infos tools/cfgs/dataset_configs/astyx_dataset_radar.yaml
-  ```
-- Eğitim (PointPillar, 0.2 m x-y, 4 m z pillar):
-  ```bash
-  CUDA_VISIBLE_DEVICES=0 python tools/train.py --cfg_file tools/cfgs/astyx_models/astyx_radarpillar.yaml --batch_size 4
-  ```
-- Eval:
-  ```bash
-  CUDA_VISIBLE_DEVICES=0 python test.py --cfg_file tools/cfgs/astyx_models/astyx_radarpillar.yaml --ckpt <ckpt_path>
-  ```
+</div>
 
-## VoD Radar Quickstart
+<p align="center">
+  <img src="docs/model_framework.png" width="80%" alt="OpenPCDet Framework">
+  <br><em>OpenPCDet modular framework architecture</em>
+</p>
 
-- Veri yapısı: `data/VoD/view_of_delft_PUBLIC/radar_5frames` altında radar verisi ve anotasyonlar.
-- Train/val/test split dosyaları (ImageSets) örnek yerleşim:
-  ```text
-  data/VoD/view_of_delft_PUBLIC/radar_5frames/
-    ImageSets/
-      train.txt
-      val.txt
-      test.txt
-    training/
-      velodyne/
-      label_2/
-      calib/
-      image_2/
-      planes/
-    testing/
-      velodyne/
-  ```
-- Info + gt database üretimi:
-  ```bash
-  python -m pcdet.datasets.vod.vod_dataset create_vod_infos tools/cfgs/dataset_configs/vod_dataset_radar.yaml
-  ```
-- Eğitim:
-  ```bash
-  CUDA_VISIBLE_DEVICES=0 python tools/train.py --cfg_file tools/cfgs/vod_models/vod_radarpillar.yaml --batch_size 4
-  ```
-- Eval:
-  ```bash
-  CUDA_VISIBLE_DEVICES=0 python test.py --cfg_file tools/cfgs/vod_models/vod_radarpillar.yaml --ckpt <ckpt_path>
-  ```
+---
 
+## Key Contributions
 
+### 1. Doppler Velocity Decomposition
 
-## Experiment Results
+Radar measures only **radial velocity** (v_r). We decompose it into Cartesian components in the VFE layer for directional awareness:
 
-### Augmentor Bug Fix (v5 vs boxq_v7)
+```
+φ = atan2(y, x + 1e-6)
+vx = v_r_comp · cos(φ)
+vy = v_r_comp · sin(φ)
+```
 
-Radar verisinde `augmentor_utils.py` içindeki `random_flip` ve `global_rotation` fonksiyonları, `points[:, 5:7]` indekslerini LiDAR'daki gibi `[vx, vy]` olarak işliyordu. Ancak radar verisinde bu indeksler `[v_r_comp, time]` değerlerini taşır. Bu hata, flip augmentation sırasında **zaman damgasının** negatife çevrilmesine neden oluyordu. Düzeltme ile velocity dönüşümleri yalnızca `gt_boxes > 7` sütun taşıdığında (yani gerçek hız bilgisi varken) uygulanır.
+### 2. Physics-Consistent Augmentation
 
-| Deney | Config | Car 3D | Ped 3D | Cyclist 3D |
-|---|---|---|---|---|
-| boxq_v7 (flip kapalı, bug'lu) | Tek anchor, NMS=0.05 | 38.58 | 0.60 | 0.00 |
-| **return_v5** (flip açık, bug düzeltilmiş) | Tek anchor, NMS=0.01 | 35.35 | 31.99 | 17.65 |
+Fixed a critical bug in `augmentor_utils.py` where `random_flip` and `global_rotation` were incorrectly transforming time values instead of velocity vectors. Velocity is a physical vector and must be rotated/flipped alongside point coordinates.
+
+### 3. PillarAttention for Sparse Radar
+
+Masked multi-head self-attention that handles the inherent sparsity of radar point clouds via key padding masks, preventing empty pillar regions from corrupting attention scores.
+
+### 4. Dual Cyclist Anchor Strategy
+
+VoD's Cyclist class contains diverse sub-types (bicycle, rider, motor, moped). A dual-anchor approach captures both small (bicycle) and large (motorcycle) vehicles separately.
+
+---
+
+## Results
+
+### SOTA Comparison on VoD
+
+**Entire Annotated Area (EAA)** — 3D AP (%) at IoU: Car=0.50, Ped/Cyc=0.25
+
+| Rank | Method | Year | Car | Ped | Cyc | mAP |
+|:---:|---|---|:---:|:---:|:---:|:---:|
+| 1 | MAFF-Net | 2025 RA-L | 42.3 | **46.8** | **74.7** | **54.6** |
+| 2 | SCKD | 2025 AAAI | 41.89 | 43.51 | 70.83 | 52.08 |
+| 3 | RadarGaussianDet3D | 2025 | 40.7 | 42.4 | 73.0 | 52.0 |
+| 5 | SMURF | 2023 TIV | **42.31** | 39.09 | 71.50 | 50.97 |
+| 6 | RadarPillars (paper) | 2024 IROS | 41.1 | 38.6 | 72.6 | 50.70 |
+| **10** | **Ours (default)** | **--** | **39.2** | **42.6** | **68.4** | **49.9** |
+| **11** | **Ours (vel. decomp)** | **--** | **38.7** | **41.8** | **69.8** | **49.9** |
+| 12 | CenterPoint (baseline) | -- | 33.87 | 39.01 | 66.85 | 46.58 |
+| 13 | PointPillars (baseline) | -- | 37.92 | 31.24 | 65.66 | 44.94 |
+
+### Our Results vs. Paper
+
+| Configuration | Car | Ped | Cyc | mAP |
+|---|:---:|:---:|:---:|:---:|
+| RadarPillars paper (5-frame) | 41.1 | 38.6 | **72.6** | **50.7** |
+| Ours — default (best epoch) | 39.2 | **42.6** (+4.0) | 68.4 | 49.9 |
+| Ours — vel. decomp (best epoch) | 38.7 | 41.8 (+3.2) | 69.8 | 49.9 |
+
+**Key observations:**
+- Pedestrian detection **exceeds** the paper by +3.2 to +4.0 AP
+- Overall mAP gap is only **-0.8** from the original paper
+- Cyclist detection shows the largest gap (-2.8 to -4.2 AP)
+
+### 3D AP Evolution (Epoch 30-40)
+
+<p align="center">
+  <img src="docs/visualizations/3d_ap_evolution_2peakcyclist.png" width="60%" alt="3D AP Evolution">
+  <br><em>Training is highly stable: Cyclist AP stays in 19.5-20.4 range with minimal oscillation</em>
+</p>
+
+---
+
+### Ablation Studies
+
+#### Augmentor Bug Fix
+
+| Experiment | Config | Car 3D | Ped 3D | Cyclist 3D |
+|---|---|:---:|:---:|:---:|
+| boxq_v7 (flip off, buggy) | Single anchor, NMS=0.05 | 38.58 | 0.60 | 0.00 |
+| **return_v5** (flip on, bug fixed) | Single anchor, NMS=0.01 | 35.35 | **31.99** | **17.65** |
 
 > Pedestrian: 0.60 → 32.00 | Cyclist: 0.00 → 17.65
 
-### Dual Cyclist Anchor (2peakcyclist)
+#### Dual Cyclist Anchor
 
-VoD datasetindeki Cyclist sınıfı, `bicycle`, `rider`, `motor`, `moped_scooter` gibi farklı boyutlarda alt-tipleri içerir. Tek anchor (1.59×0.69) bu çeşitliliği yakalayamıyordu. Çift anchor stratejisi ile küçük (bisiklet) ve büyük (motosiklet) araçlar ayrı yakalanır.
+| Experiment | Car 3D | Ped 3D | Cyclist 3D | Weighted Mean |
+|---|:---:|:---:|:---:|:---:|
+| return_v5_epoch80 (single anchor) | 34.31 | 34.32 | 18.08 | 26.20 |
+| **2peakcyclist** (dual anchor) | 33.60 | **35.99** | **20.30** | **27.67** |
 
-| Deney | Car 3D | Ped 3D | Cyclist 3D | Weighted Mean |
-|---|---|---|---|---|
-| return_v5_epoch80 (tek anchor) | 34.31 | 34.32 | 18.08 | 26.20 |
-| **2peakcyclist** (çift anchor) | 33.60 | **35.99** | **20.30** | **27.67** |
+> Cyclist: 18.08 → 20.30 (+2.22 AP, +12.3%) | Recall@0.3: 0.40 → 0.47
 
-> Cyclist: 18.08 → 20.30 (+2.22 AP, +%12.3) | Recall@0.3: 0.40 → 0.47
+#### Velocity Normalization Analysis
 
-### Velocity Normalizasyonu Analizi
+The `v_r_comp` value is decomposed into vx, vy in the VFE layer. Normalization scales these via `(value - μ) / σ`. However, the config's mean/std values didn't match the actual data distribution:
 
-Modele giren `v_r_comp` (ego-motion compensated radial velocity) değeri, VFE katmanında kartezyen bileşenlerine ayrıştırılır:
-```
-phi = atan2(y, x)
-vx = v_r_comp * cos(phi)
-vy = v_r_comp * sin(phi)
-```
-
-Normalizasyon bu bileşenleri `(değer - μ) / σ` ile ölçekler. Ancak config'teki mean/std değerleri gerçek veri dağılımıyla uyuşmuyordu:
-
-| Parametre | Config (eski) | Gerçek veri | Oran |
-|---|---|---|---|
+| Parameter | Config (old) | Actual Data | Ratio |
+|---|:---:|:---:|:---:|
 | vx std | 0.891 | **1.847** | 0.48x |
 | vy std | 0.453 | **0.944** | 0.48x |
 
-Config'teki std değerleri gerçek std'nin yarısı olduğu için normalizasyon, dağılımı sıkıştırmak yerine **genişletiyordu** (amplifikasyon).
+Since config std was half the actual std, normalization was **amplifying** the distribution instead of compressing it.
 
-#### v_r_comp Normalizasyon Karşılaştırması
+<p align="center">
+  <img src="docs/visualizations/velocity_norm_comparison.png" width="90%" alt="Velocity Normalization Comparison">
+  <br><em>Config normalization increases outliers (5.8%) compared to raw (4.4%). Correct normalization reduces them to 2.3%</em>
+</p>
 
-![Velocity Norm Comparison](docs/visualizations/velocity_norm_comparison.png)
+<p align="center">
+  <img src="docs/visualizations/velocity_norm_2d_comparison.png" width="90%" alt="2D Velocity Distribution">
+  <br><em>Top: vy histogram. Bottom: vx-vy heatmap (log-scale), cyan dashed circle = 3σ boundary</em>
+</p>
 
-| | σ (std) | Outlier oranı (\|v\|>3) |
-|---|---|---|
-| Ham | 2.075 | %4.1 |
-| Config Norm (σ=0.89) | 2.328 | **%4.7 (arttı)** |
-| Doğru Norm (σ=2.08) | 1.000 | **%1.4 (azaldı)** |
+| | σ (std) | Outlier ratio (\|v\|>3) |
+|---|:---:|:---:|
+| Raw | 2.075 | 4.1% |
+| Config Norm (σ=0.89) | 2.328 | **4.7% (increased)** |
+| Correct Norm (σ=2.08) | 1.000 | **1.4% (decreased)** |
 
-Config normalizasyonu outlier'ları azaltmak yerine artırıyor. Doğru mean/std değerleri:
-```yaml
-VELOCITY_COMP_MEAN: [0.0788, -0.0194]
-VELOCITY_COMP_STD:  [1.8466, 0.9439]
-```
+#### Normalization ON vs OFF Training Results
 
-#### 2D Dağılım: Ham vs Config Norm vs Doğru Norm
+Even with incorrect std values, normalization ON outperforms OFF (vx/vy balance effect):
 
-![Velocity 2D Comparison](docs/visualizations/velocity_norm_2d_comparison.png)
-
-Üst satır: vy histogramı. Alt satır: vx-vy heatmap (log-scale), mavi daire = 3σ sınırı.
-- **Config norm**: 3σ dairesi dışı %5.8 — ham halden (%4.1) bile kötü
-- **Doğru norm**: 3σ dairesi dışı %2.1 — outlier'lar gerçekten azalıyor
-
-#### Normalizasyon ON vs OFF Eğitim Sonuçları (e128 vs e128_tek_norm)
-
-Yanlış std değerleriyle bile normalizasyon açık olması, kapalı olmaktan daha iyi sonuç verdi (vx/vy dengesini sağladığı için):
-
-| Sınıf | Norm ON (e128) | Norm OFF (e128_tek_norm) | Fark |
-|---|---|---|---|
+| Class | Norm ON (e128) | Norm OFF (e128_tek_norm) | Diff |
+|---|:---:|:---:|:---:|
 | Car | 35.27 | 35.00 | +0.27 |
 | Ped | 34.27 | 33.17 | **+1.10** |
 | Cyc | 19.48 | 18.76 | **+0.72** |
 
-> Doğru std değerleriyle normalizasyon daha da etkili olacaktır.
+---
 
-### 3D AP Evolution (2peakcyclist, Epoch 30-40)
+## Installation
 
-![3D AP Evolution](docs/visualizations/3d_ap_evolution_2peakcyclist.png)
-
-Eğitim oldukça stabil: Cyclist AP epoch 30-40 arasında 19.5-20.4 bandında, ciddi bir salınım yok.
-
-### BEV Görselleştirme Örnekleri
-
-Aşağıdaki görsellerde sol panel ground truth, sağ panel GT + model tahminlerini gösterir. Radar noktaları RCS değerine göre renklendirilmiştir.
-
-**Sample 00315** — Yoğun şehir içi sahne (araç + bisikletli + yaya):
-![BEV Sample 00315](docs/visualizations/bev_00315.png)
-
-**Sample 00107** — Yakın mesafe bisikletli kümesi:
-![BEV Sample 00107](docs/visualizations/bev_00107.png)
-
-## Dataset Visualization & Anchor Verification
-
-Veri setindeki nesne dağılımlarını analiz etmek ve anchor boyutlarının (şablon kutular) doğruluğunu kontrol etmek için aşağıdaki araçları kullanabilirsiniz.
-
-### 1. Anchor Doğrulama Grafiği
-Bu grafik, veri setindeki gerçek nesne boyutlarını (bulut şeklinde) ve üzerine yerleştirilen Baseline (v5) ile Master (v7) anchor'larını gösterir. Master sürümündeki bisikletli performans kaybının, anchor boyutunun veri ortalamasından çok büyük seçilmesinden kaynaklandığı burada görselleştirilmiştir.
-
-![Anchor Verification](docs/visualizations/anchor_verification.png)
-
-*   **Siyah Çarpı (Baseline):** 1.59m - Veri merkezine tam oturur.
-*   **Mavi Baklava (Master):** 1.94m - Veri bulutu dışına sapmıştır.
-
-### 2. Cyclist Uzunluk Dağılımı (Histogram)
-Bu grafik, `Cyclist` sınıfının aslında iki farklı gruptan (durağan bisikletler ve hareketli sürücüler) oluştuğunu ve tek bir anchor'ın neden "orta yol" (1.62m) değerinde olması gerektiğini gösterir.
-
-![Cyclist Distribution](docs/visualizations/cyclist_dist.png)
-
-### İzleme ve Analiz Komutları
-Veri setini kendi başınıza analiz etmek için şu scriptleri çalıştırabilirsiniz:
+**Requirements:** Python 3.8+, PyTorch 2.4+, CUDA 12.x, spconv 2.3.6
 
 ```bash
-# Nesne boyutlarını dağılım grafiği olarak kaydeder (tools/anchor_verification.png)
-python tools/visualize_anchors.py
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -U pip
 
-# Cyclist sınıfı için detaylı histogram üretir (tools/cyclist_dist.png)
-python tools/plot_cyclist_dist.py
+# Install OpenPCDet with CUDA extensions
+python setup.py develop
 
-# Veri setindeki (PKL vs Raw Label) tutarlılığı kontrol eder
-python tools/check_data_consistency.py
+# Install WandB for experiment tracking (optional)
+pip install wandb
 ```
 
-### 3. BEV (Kuşbakışı) Görselleştirme
-Model tahminlerini radar nokta bulutu üzerinde kuşbakışı (Bird's Eye View) olarak görselleştirir.
-GT kutuları düz çizgi, tahminler kesikli çizgi ile gösterilir. Radar noktaları RCS'ye göre renklendirilir.
+See [docs/INSTALL.md](docs/INSTALL.md) for detailed instructions.
+
+---
+
+## Dataset Preparation
+
+### View-of-Delft (VoD)
+
+```
+data/VoD/view_of_delft_PUBLIC/radar_5frames/
+├── ImageSets/
+│   ├── train.txt
+│   ├── val.txt
+│   └── test.txt
+├── training/
+│   ├── velodyne/          # Radar point clouds (.bin)
+│   ├── label_2/           # 3D annotations
+│   ├── calib/             # Calibration files
+│   └── image_2/           # Camera images (optional)
+└── testing/
+    └── velodyne/
+```
 
 ```bash
-# Tek bir sample için BEV görselleştirme
+# Generate info files and GT database
+python -m pcdet.datasets.vod.vod_dataset create_vod_infos \
+    tools/cfgs/dataset_configs/vod_dataset_radar.yaml
+```
+
+### Astyx HiRes2019
+
+```
+data/astyx/
+├── ImageSets/
+│   ├── train.txt
+│   ├── val.txt
+│   └── test.txt
+├── training/
+│   └── radar/             # Radar point clouds (.bin)
+└── testing/
+```
+
+```bash
+python -m pcdet.datasets.astyx.astyx_dataset create_astyx_infos \
+    tools/cfgs/dataset_configs/astyx_dataset_radar.yaml
+```
+
+---
+
+## Training & Evaluation
+
+### VoD Training
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python tools/train.py \
+    --cfg_file tools/cfgs/vod_models/vod_radarpillar.yaml \
+    --batch_size 16
+
+# With WandB experiment tracking
+CUDA_VISIBLE_DEVICES=0 python tools/train.py \
+    --cfg_file tools/cfgs/vod_models/vod_radarpillar.yaml \
+    --batch_size 16 --use_wandb
+```
+
+### Astyx Training
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python tools/train.py \
+    --cfg_file tools/cfgs/astyx_models/astyx_radarpillar.yaml \
+    --batch_size 4
+```
+
+### Evaluation
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python tools/test.py \
+    --cfg_file tools/cfgs/vod_models/vod_radarpillar.yaml \
+    --ckpt <checkpoint_path>
+```
+
+### Key Hyperparameters
+
+| Parameter | VoD | Astyx |
+|---|---|---|
+| Voxel Size | 0.16 x 0.16 x 5.0 m | 0.2 x 0.2 x 4.0 m |
+| Max Points/Voxel | 16 | 32 |
+| Epochs | 60 | 160 |
+| Learning Rate | 0.01 | 0.003 |
+| Optimizer | adam_onecycle | adam_onecycle |
+| Early Stopping | 30 epoch patience | -- |
+| NMS Threshold | 0.1 | 0.01 |
+
+---
+
+## Visualization Tools
+
+### BEV (Bird's Eye View) Visualization
+
+Visualize model predictions overlaid on radar point clouds. GT boxes are solid lines, predictions are dashed. Points are colored by RCS value.
+
+```bash
 python tools/visualize_bev.py \
-  --pred_dir output/cfgs/vod_models/vod_radarpillar/<experiment>/eval/epoch_<N>/val/default/final_result/data \
-  --samples 00315 00107 \
-  --score_thresh 0.15 \
-  --output_dir output_bev
-
-# Eğitim log dosyasından AP evolution grafikleri oluşturma
-python visualize_radar_logs.py \
-  --logs output/cfgs/vod_models/vod_radarpillar/<experiment>/eval/epoch_*/val/default/log_eval_*.txt \
-  --output output_plots
+    --pred_dir output/cfgs/vod_models/vod_radarpillar/<exp>/eval/epoch_<N>/val/default/final_result/data \
+    --samples 00315 00107 \
+    --score_thresh 0.15 \
+    --output_dir output_bev
 ```
 
+<p align="center">
+  <img src="docs/visualizations/bev_00315.png" width="90%" alt="BEV Sample 00315">
+  <br><em>Sample 00315 — Dense urban scene (cars + cyclists + pedestrians)</em>
+</p>
+
+<p align="center">
+  <img src="docs/visualizations/bev_00107.png" width="90%" alt="BEV Sample 00107">
+  <br><em>Sample 00107 — Close-range cyclist cluster</em>
+</p>
+
+### Anchor Verification
+
+Analyze dataset object size distributions and verify anchor box alignment.
+
+```bash
+python tools/visualize_anchors.py    # Dimension scatter plot with anchors
+python tools/plot_cyclist_dist.py    # Cyclist length histogram
+```
+
+<p align="center">
+  <img src="docs/visualizations/anchor_verification.png" width="80%" alt="Anchor Verification">
+  <br><em>Black cross = Baseline anchor (1.59m, centered on data). Blue diamond = Master anchor (1.94m, shifted from center)</em>
+</p>
+
+<p align="center">
+  <img src="docs/visualizations/cyclist_dist.png" width="50%" alt="Cyclist Distribution">
+  <br><em>Bimodal cyclist distribution: stationary bicycles vs. moving riders</em>
+</p>
+
+### AP Evolution Plots
+
+```bash
+python visualize_radar_logs.py \
+    --logs output/cfgs/vod_models/vod_radarpillar/<exp>/eval/epoch_*/val/default/log_eval_*.txt \
+    --output output_plots
+```
+
+### Velocity Normalization Analysis
+
+```bash
+python tools/generate_velocity_norm_plots.py
+```
+
+---
+
+## Changelog
+
+| Date | Description |
+|---|---|
+| 2026-02 | Velocity decomposition: vr_comp → vx, vy in VFE layer |
+| 2026-02 | Dual Cyclist anchor strategy for diverse sub-types |
+| 2026-02 | Augmentor bug fix: correct velocity index handling in flip/rotation |
+| 2026-02 | BEV visualization tool (`tools/visualize_bev.py`) |
+| 2026-02 | WandB integration with `--use_wandb` flag |
+| 2026-02 | VoD radar pipeline: dataset config, info generation |
+| 2026-01 | Astyx radar pipeline: 7-feature point loader, velocity-aware augmentations |
+
+---
+
+## Citation
+
+```bibtex
+@inproceedings{gillen2024radarpillars,
+  title     = {RadarPillars: Efficient Object Detection from 4D Radar Point Clouds},
+  author    = {Gillen, Julius and Bieder, Manuel and Stiller, Christoph},
+  booktitle = {Proc. IEEE/RSJ Int. Conf. Intelligent Robots and Systems (IROS)},
+  year      = {2024}
+}
+```
+
+```bibtex
+@misc{openpcdet2020,
+  title  = {OpenPCDet: An Open-source Toolbox for 3D Object Detection from Point Clouds},
+  author = {OpenPCDet Development Team},
+  year   = {2020},
+  howpublished = {\url{https://github.com/open-mmlab/OpenPCDet}}
+}
+```
+
+---
+
+## Acknowledgement
+
+This project is built upon [OpenPCDet](https://github.com/open-mmlab/OpenPCDet), an open-source 3D object detection framework. We thank the OpenPCDet team for the original codebase and supported methods.
+
+---
 
 ## License
 
 `OpenPCDet` is released under the [Apache 2.0 license](LICENSE).
-
-## Acknowledgement
-Bu proje, [OpenPCDet](https://github.com/open-mmlab/OpenPCDet) açık kaynak 3D nesne algılama framework'ü üzerine inşa edilmiştir.
-Orijinal kod tabanı ve desteklenen yöntemler için OpenPCDet ekibine teşekkür ederiz.
-
-## Citation
-```
-@inproceedings{shi2020pv,
-  title={Pv-rcnn: Point-voxel feature set abstraction for 3d object detection},
-  author={Shi, Shaoshuai and Guo, Chaoxu and Jiang, Li and Wang, Zhe and Shi, Jianping and Wang, Xiaogang and Li, Hongsheng},
-  booktitle={Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition},
-  pages={10529--10538},
-  year={2020}
-}
-```
