@@ -127,8 +127,8 @@ VoD's Cyclist class contains diverse sub-types (bicycle, rider, motor, moped). A
 | 3 | RadarGaussianDet3D | 2025 | 40.7 | 42.4 | 73.0 | 52.0 |
 | 5 | SMURF | 2023 TIV | **42.31** | 39.09 | 71.50 | 50.97 |
 | 6 | RadarPillars (paper) | 2024 IROS | 41.1 | 38.6 | 72.6 | 50.70 |
-| **10** | **Ours (default)** | **--** | **39.2** | **42.6** | **68.4** | **49.9** |
-| **11** | **Ours (vel. decomp)** | **--** | **38.7** | **41.8** | **69.8** | **49.9** |
+| **10** | **Ours (default, e58)** | **--** | **36.29** | **41.09** | **68.90** | **48.76** |
+| **11** | **Ours (vel. decomp, e56)** | **--** | **35.43** | **39.96** | **70.76** | **48.72** |
 | 12 | CenterPoint (baseline) | -- | 33.87 | 39.01 | 66.85 | 46.58 |
 | 13 | PointPillars (baseline) | -- | 37.92 | 31.24 | 65.66 | 44.94 |
 
@@ -136,14 +136,15 @@ VoD's Cyclist class contains diverse sub-types (bicycle, rider, motor, moped). A
 
 | Configuration | Car | Ped | Cyc | mAP |
 |---|:---:|:---:|:---:|:---:|
-| RadarPillars paper (5-frame) | 41.1 | 38.6 | **72.6** | **50.7** |
-| Ours — default (best epoch) | 39.2 | **42.6** (+4.0) | 68.4 | 49.9 |
-| Ours — vel. decomp (best epoch) | 38.7 | 41.8 (+3.2) | 69.8 | 49.9 |
+| RadarPillars paper (5-frame) | **41.1** | 38.6 | **72.6** | **50.7** |
+| Ours — default (e58) | 36.29 | **41.09** (+2.5) | 68.90 | 48.76 |
+| Ours — vel. decomp (e56) | 35.43 | 39.96 (+1.4) | 70.76 | 48.72 |
 
 **Key observations:**
-- Pedestrian detection **exceeds** the paper by +3.2 to +4.0 AP
-- Overall mAP gap is only **-0.8** from the original paper
-- Cyclist detection shows the largest gap (-2.8 to -4.2 AP)
+- Pedestrian detection **exceeds** the paper by +1.4 to +2.5 AP
+- Velocity decomposition boosts Cyclist AP significantly: 68.90 → **70.76** (+1.86)
+- Overall mAP gap is **-1.9** from the original paper
+- Cyclist detection shows the largest gap (-1.8 to -3.7 AP)
 
 ### 3D AP Evolution (Epoch 30-40)
 

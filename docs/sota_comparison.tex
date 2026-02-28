@@ -91,9 +91,9 @@ Yöntemler mAP'a göre sıralanmıştır. \best{Yeşil} = sütundaki en iyi, \ou
 8  & MUFASA \cite{mufasa}                   & 2024 ICANN & 43{,}10         & 38{,}97         & 68{,}65         & 50{,}24        & 5 \\
 9  & SMIFormer \cite{smiformer}             & 2023       & 39{,}53         & 41{,}88         & 64{,}91         & 48{,}77        & 5 \\
 \rowcolor{rowalt}
-10 & \ours{Bizim (default, en iyi)}         & --         & \ours{39{,}2}   & \ours{42{,}6}   & \ours{68{,}4}   & \ours{49{,}9}  & 5 \\
+10 & \ours{Bizim (default, e58)}             & --         & \ours{36{,}29}  & \ours{41{,}09}  & \ours{68{,}90}  & \ours{48{,}76} & 5 \\
 \rowcolor{rowalt}
-11 & \ours{Bizim (vel.\ decomp, en iyi)}    & --         & \ours{38{,}7}   & \ours{41{,}8}   & \ours{69{,}8}   & \ours{49{,}9}  & 5 \\
+11 & \ours{Bizim (vel.\ decomp, e56)}       & --         & \ours{35{,}43}  & \ours{39{,}96}  & \ours{70{,}76}  & \ours{48{,}72} & 5 \\
 12 & CenterPoint (temel)                    & --         & 33{,}87         & 39{,}01         & 66{,}85         & 46{,}58        & 5 \\
 13 & PointPillars (temel)                   & --         & 37{,}92         & 31{,}24         & 65{,}66         & 44{,}94        & 5 \\
 14 & RPFA-Net \cite{rpfanet}                & 2021 ITSC  & 33{,}45         & 26{,}42         & 56{,}34         & 38{,}75        & 5 \\
@@ -143,12 +143,12 @@ Yöntemler mAP'a göre sıralanmıştır. \best{Yeşil} = sütundaki en iyi, \ou
 \midrule
 RadarPillars makale (5 çerçeve)     & 41{,}1          & 38{,}6                      & \textbf{72{,}6} & \textbf{50{,}7} \\
 \midrule
-Bizim -- default (en iyi epoch)     & 39{,}2          & \textbf{42{,}6} \gain{4{,}0}   & 68{,}4          & 49{,}9 \\
-Bizim -- vel.\ decomp (en iyi epoch) & 38{,}7         & 41{,}8 \gain{3{,}2}            & 69{,}8          & 49{,}9 \\
+Bizim -- default (e58)               & 36{,}29         & \textbf{41{,}09} \gain{2{,}5}  & 68{,}90         & 48{,}76 \\
+Bizim -- vel.\ decomp (e56)          & 35{,}43         & 39{,}96 \gain{1{,}4}           & 70{,}76         & 48{,}72 \\
 \midrule
 \multicolumn{5}{@{}l}{\textit{Makaleye göre sınıf bazlı fark:}} \\
-\quad default                       & \loss{$-$1{,}9} & \gain{4{,}0}                & \loss{$-$4{,}2} & \loss{$-$0{,}8} \\
-\quad vel.\ decomp                  & \loss{$-$2{,}4} & \gain{3{,}2}                & \loss{$-$2{,}8} & \loss{$-$0{,}8} \\
+\quad default                       & \loss{$-$4{,}8} & \gain{2{,}5}                & \loss{$-$3{,}7} & \loss{$-$1{,}9} \\
+\quad vel.\ decomp                  & \loss{$-$5{,}7} & \gain{1{,}4}                & \loss{$-$1{,}8} & \loss{$-$2{,}0} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -156,9 +156,10 @@ Bizim -- vel.\ decomp (en iyi epoch) & 38{,}7         & 41{,}8 \gain{3{,}2}     
 \noindent
 \textbf{Temel gözlemler:}
 \begin{itemize}[nosep]
-    \item Yaya algılama, makaleyi +3{,}2 ile +4{,}0 AP arasında \textbf{geçmektedir}.
-    \item Bisikletli algılama en büyük açığı oluşturmaktadır ($-$2{,}8 ile $-$4{,}2 AP).
-    \item Genel mAP farkı yalnızca $-$0{,}8 olup makale performansına yakın konumdayız.
+    \item Yaya algılama, makaleyi +1{,}4 ile +2{,}5 AP arasında \textbf{geçmektedir}.
+    \item Hız ayrıştırma, Bisikletli AP'yi önemli ölçüde artırmaktadır: 68{,}90 $\to$ \textbf{70{,}76} (+1{,}86).
+    \item Araba algılama en büyük açığı oluşturmaktadır ($-$4{,}8 ile $-$5{,}7 AP).
+    \item Genel mAP farkı $-$1{,}9 ile $-$2{,}0 aralığındadır.
 \end{itemize}
 
 % ============================================================
@@ -389,23 +390,23 @@ Hız ayrıştırma (v$_{r,\text{comp}}$ $\to$ v$_x$, v$_y$) üzerinde bir ablasy
 \toprule
 \textbf{Konfigürasyon} & \textbf{Araba} & \textbf{Yaya} & \textbf{Bisikletli} & \textbf{mAP} & \textbf{En İyi Epoch} \\
 \midrule
-default (ayrıştırmasız)  & \textbf{39{,}21} & \textbf{42{,}58} & 68{,}38          & \textbf{49{,}93} & 54 \\
-velocity\_decomp         & 38{,}66          & 41{,}79          & \textbf{69{,}76} & 49{,}92          & 56 \\
+default (ayrıştırmasız)  & \textbf{36{,}29} & \textbf{41{,}09} & 68{,}90          & \textbf{48{,}76} & 58 \\
+velocity\_decomp         & 35{,}43          & 39{,}96          & \textbf{70{,}76} & 48{,}72          & 56 \\
 \midrule
-$\Delta$                 & \loss{$-$0{,}55} & \loss{$-$0{,}79} & \gain{1{,}38}    & $-$0{,}01        & -- \\
+$\Delta$                 & \loss{$-$0{,}86} & \loss{$-$1{,}13} & \gain{1{,}86}    & $-$0{,}04        & -- \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \noindent
-Hız ayrıştırma, Bisikletli AP'yi +1{,}38 artırmakta ancak Araba ($-$0{,}55) ve Yaya ($-$0{,}79) değerlerini hafifçe düşürmektedir. Genel mAP neredeyse aynıdır. Makale, ayrıştırmadan +3{,}8 mAP kazanç raporlamaktadır; bizdeki daha küçük kazanç, ayrıştırılmış özelliklerle kısmen örtüşen ek ham hız özelliklerinin (v$_r$, v$_{r,\text{comp}}$, time) varlığından kaynaklanıyor olabilir.
+Hız ayrıştırma, Bisikletli AP'yi +1{,}86 artırmakta ancak Araba ($-$0{,}86) ve Yaya ($-$1{,}13) değerlerini düşürmektedir. Genel mAP neredeyse aynıdır. Makale, ayrıştırmadan +3{,}8 mAP kazanç raporlamaktadır; bizdeki daha küçük kazanç, ayrıştırılmış özelliklerle kısmen örtüşen ek ham hız özelliklerinin (v$_r$, v$_{r,\text{comp}}$, time) varlığından kaynaklanıyor olabilir.
 
 % ============================================================
 \section{Sonuç}
 
-RadarPillar implementasyonumuz, VoD veri setinde rekabetçi sonuçlar (mAP ${\sim}$49{,}9) elde ederek yalnızca radar yöntemleri arasında 8--9. sırada yer almakta ve orijinal makalenin raporladığı performansın 0{,}8 mAP dahilinde kalmaktadır. Ana açık Bisikletli ($-$2{,}8 ile $-$4{,}2 AP) ve Araba ($-$1{,}9 AP) sınıflarındayken, Yaya algılama makaleyi +3{,}2 ile +4{,}0 AP \textit{geçmektedir}.
+RadarPillar implementasyonumuz, VoD veri setinde rekabetçi sonuçlar (mAP ${\sim}$48{,}8) elde ederek yalnızca radar yöntemleri arasında 10--11. sırada yer almakta ve orijinal makalenin raporladığı performansın ${\sim}$2 mAP dahilinde kalmaktadır. Ana açık Araba ($-$4{,}8 ile $-$5{,}7 AP) sınıfındayken, Yaya algılama makaleyi +1{,}4 ile +2{,}5 AP \textit{geçmektedir}. Hız ayrıştırma Bisikletli AP'yi 70{,}76'ya çıkarmıştır.
 
-Güncel en iyi sonuca (MAFF-Net, 54{,}6 mAP) olan fark yaklaşık 4{,}7 mAP'tır. Literatür analizi, en etkili iyileştirmelerin şunlar olacağını ortaya koymaktadır:
+Güncel en iyi sonuca (MAFF-Net, 54{,}6 mAP) olan fark yaklaşık 5{,}8 mAP'tır. Literatür analizi, en etkili iyileştirmelerin şunlar olacağını ortaya koymaktadır:
 \begin{enumerate}[nosep]
     \item \textbf{GeoSPA geometrik özellikleri} -- Yaya iyileştirmesi (+6 AP potansiyeli)
     \item \textbf{CenterHead} -- Küçük nesne algılama iyileştirmesi
