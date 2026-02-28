@@ -146,11 +146,11 @@ VoD's Cyclist class contains diverse sub-types (bicycle, rider, motor, moped). A
 - Overall mAP gap is **-1.9** from the original paper
 - Cyclist detection shows the largest gap (-1.8 to -3.7 AP)
 
-### 3D AP Evolution (Epoch 30-40)
+### 3D AP Evolution (Epoch 48-60, Default Experiment)
 
 <p align="center">
-  <img src="docs/visualizations/3d_ap_evolution_2peakcyclist.png" width="60%" alt="3D AP Evolution">
-  <br><em>Training is highly stable: Cyclist AP stays in 19.5-20.4 range with minimal oscillation</em>
+  <img src="docs/visualizations/3d_ap_evolution_default.png" width="70%" alt="3D AP Evolution">
+  <br><em>Model converges around epoch 54: Car ~36, Pedestrian ~41, Cyclist ~68-69 AP</em>
 </p>
 
 ---
@@ -332,8 +332,12 @@ CUDA_VISIBLE_DEVICES=0 python tools/test.py \
 Visualize model predictions overlaid on radar point clouds. GT boxes are solid lines, predictions are dashed. Points are colored by RCS value.
 
 ```bash
+# Generate BEV from result.pkl (recommended)
+python tools/generate_readme_visuals.py
+
+# Or from KITTI-format txt predictions
 python tools/visualize_bev.py \
-    --pred_dir output/cfgs/vod_models/vod_radarpillar/<exp>/eval/epoch_<N>/val/default/final_result/data \
+    --pred_dir <path_to_kitti_txt_predictions> \
     --samples 00315 00107 \
     --score_thresh 0.15 \
     --output_dir output_bev
@@ -341,12 +345,12 @@ python tools/visualize_bev.py \
 
 <p align="center">
   <img src="docs/visualizations/bev_00315.png" width="90%" alt="BEV Sample 00315">
-  <br><em>Sample 00315 — Dense urban scene (cars + cyclists + pedestrians)</em>
+  <br><em>Sample 00315 — Dense urban scene (default experiment, epoch 58)</em>
 </p>
 
 <p align="center">
   <img src="docs/visualizations/bev_00107.png" width="90%" alt="BEV Sample 00107">
-  <br><em>Sample 00107 — Close-range cyclist cluster</em>
+  <br><em>Sample 00107 — Close-range cyclist cluster (default experiment, epoch 58)</em>
 </p>
 
 ### Anchor Verification
