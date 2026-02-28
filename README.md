@@ -48,42 +48,8 @@ This repository implements the **RadarPillars** architecture ([Gillen et al., IR
 
 ## Architecture
 
-<div align="center">
-
-```
-Input: Radar Point Cloud (N, 7)
-         │
-         ▼
-┌─────────────────────┐
-│  PillarVFE          │  Voxelization + Velocity Decomposition
-│  vr → vx, vy        │  φ = atan2(y, x), vx = vr·cos(φ), vy = vr·sin(φ)
-└─────────┬───────────┘
-          ▼
-┌─────────────────────┐
-│  PillarAttention     │  Global Self-Attention (C=32, H=1)
-│  + LayerNorm + FFN   │  with key padding mask for sparse radar
-└─────────┬───────────┘
-          ▼
-┌─────────────────────┐
-│  PointPillarScatter  │  Sparse-to-Dense BEV projection
-└─────────┬───────────┘
-          ▼
-┌─────────────────────┐
-│  BaseBEVBackbone     │  Multi-scale 2D CNN (3 layers, 32 channels)
-└─────────┬───────────┘
-          ▼
-┌─────────────────────┐
-│  AnchorHeadSingle    │  Anchor-based detection + Direction classifier
-└─────────┬───────────┘
-          ▼
-    3D Bounding Boxes
-```
-
-</div>
-
 <p align="center">
-  <img src="docs/model_framework.png" width="80%" alt="OpenPCDet Framework">
-  <br><em>OpenPCDet modular framework architecture</em>
+  <img src="docs/visualizations/radarpillar_architecture.png" width="75%" alt="RadarPillar Architecture">
 </p>
 
 ---
