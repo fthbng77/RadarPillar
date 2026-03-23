@@ -285,3 +285,38 @@ def boxes3d_nearest_bev_iou(boxes_a, boxes_b):
     boxes_bev_b = boxes3d_lidar_to_aligned_bev_boxes(boxes_b)
 
     return boxes_iou_normal(boxes_bev_a, boxes_bev_b)
+
+
+def get_velocity_for_boxes(boxes, points):
+    """
+    Extracts mean velocities for points inside each box.
+    Args:
+        boxes: (N, 7) [x, y, z, dx, dy, dz, heading]
+        points: (M, 7) [x, y, z, rcs, v_r, v_x, v_y] (Astyx or VoD dataset format)
+    Returns:
+        velocities: (N, 2) [vx, vy] mean velocity for each box
+    """
+    boxes_cpu = boxes.cpu() if torch.is_tensor(boxes) else boxes
+    points_cpu = points.cpu() if torch.is_tensor(points) else points
+
+    # Find points in boxes using roiaware_pool3d_utils
+    point_indices = roiaware_pool3d_utils.points_in_boxes_cpu(
+        torch.as_tensor(points_cpu[:, 0:3]).float(), 
+        torch.as_tensor(boxes_cpu).float()
+    )
+    
+    velocities = []
+    for i in range(boxes.shape[0]):
+        box_points_mask = (point_indices[i] > 0)
+        if box_points_mask.sum() > 0:
+            # Kutunun içindeki noktaların vx ve vy ortalamasını al
+            # Not: Repoya göre noktaların 5. ve 6. indeksleri vx, vy (veya v_r)
+            mean_vx = points_cpu[box_points_mask, 5].mean()
+            mean_vy = points_cpu[box_points_mask, 6].mean()
+            velocities.append([mean_vx.item() if torch.is_tensor(mean_vx) else mean_vx, 
+                               mean_vy.item() if torch.is_tensor(mean_vy) else mean_vy])
+        else:
+            velocities.append([0.0, 0.0]) # Kutu boşsa 0 hız
+            
+    velocities_array = np.array(velocities)
+    return velocities_array

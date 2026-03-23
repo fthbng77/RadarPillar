@@ -35,6 +35,7 @@ def parse_config():
     parser.add_argument('--start_epoch', type=int, default=0, help='')
     parser.add_argument('--eval_tag', type=str, default='default', help='eval tag for this experiment')
     parser.add_argument('--eval_all', action='store_true', default=False, help='whether to evaluate all checkpoints')
+    parser.add_argument('--run_tracking', action='store_true', default=False, help='run tracking algorithm instead of evaluation')
     parser.add_argument('--ckpt_dir', type=str, default=None, help='specify a ckpt directory to be evaluated if needed')
     parser.add_argument('--save_to_file', action='store_true', default=False, help='')
 
@@ -62,6 +63,75 @@ def eval_single_ckpt(model, test_loader, args, eval_output_dir, logger, epoch_id
         cfg, model, test_loader, epoch_id, logger, dist_test=dist_test,
         result_dir=eval_output_dir, save_to_file=args.save_to_file
     )
+
+
+def track_single_ckpt(model, test_loader, args, eval_output_dir, logger, epoch_id, dist_test=False):
+    from pcdet.tracker.gtrack import GTRACK
+
+    # load checkpoint
+    model.load_params_from_file(filename=args.ckpt, logger=logger, to_cpu=dist_test)
+    model.cuda()
+    model.eval()
+
+    logger.info('********************** Start Tracking **********************')
+    
+    tracker_cfg = cfg.TRACKER if hasattr(cfg, 'TRACKER') else None
+    tracker = GTRACK(config=tracker_cfg)
+    
+    tracking_out_path = eval_output_dir / 'tracking_results.txt'
+    tracking_out_file = open(tracking_out_path, 'w')
+    tracking_out_file.write("frame_id,track_id,x,y,z,vx,vy\n")
+    
+    from pcdet.models import load_data_to_gpu
+    for i, batch_dict in enumerate(test_loader):
+        load_data_to_gpu(batch_dict)
+        
+        with torch.no_grad():
+            pred_dicts, ret_dict = model(batch_dict)
+        
+        for frame_idx, pred in enumerate(pred_dicts):
+            pred_boxes = pred['pred_boxes'].cpu().numpy() 
+            pred_scores = pred['pred_scores'].cpu().numpy()
+            pred_labels = pred['pred_labels'].cpu().numpy()
+            
+            try:
+                PEDESTRIAN_ID = cfg.CLASS_NAMES.index('Pedestrian') + 1
+            except ValueError:
+                PEDESTRIAN_ID = 2 
+                
+            CONFIDENCE_THRESHOLD = 0.3 
+            
+            mask = (pred_labels == PEDESTRIAN_ID) & (pred_scores > CONFIDENCE_THRESHOLD)
+            valid_boxes = pred_boxes[mask]
+            
+            if len(valid_boxes) > 0:
+                centers = valid_boxes[:, 0:3] 
+                
+                from pcdet.utils import box_utils
+                batch_points = batch_dict['points']
+                frame_points = batch_points[batch_points[:, 0] == frame_idx, 1:]
+                
+                velocities = box_utils.get_velocity_for_boxes(
+                    torch.tensor(valid_boxes, device=frame_points.device), 
+                    frame_points
+                )
+                if not isinstance(velocities, np.ndarray):
+                    velocities = velocities.cpu().numpy()
+                
+                tracked_objects = tracker.update(centers, velocities)
+                
+                logger.info(f"Frame: {i} | Detected Pedestrians: {len(valid_boxes)} | Tracked: {len(tracked_objects)}")
+                for obj in tracked_objects:
+                    logger.info(f"  -> ID: {obj.id}, Location: X={obj.x:.2f}, Y={obj.y:.2f}, V=({obj.vx:.2f}, {obj.vy:.2f})")
+                    tracking_out_file.write(f"{i},{obj.id},{obj.x:.4f},{obj.y:.4f},{obj.z:.4f},{obj.vx:.4f},{obj.vy:.4f}\n")
+                
+            else:
+                # tracker.update(np.empty((0,3)), np.empty((0,2)))
+                logger.info(f"Frame: {i} | No pedestrian detected.")
+                
+    tracking_out_file.close()
+    logger.info(f'Tracking results saved to {tracking_out_path}')
+    logger.info('********************** Tracking Finished **********************')
 
 
 def get_no_evaluated_ckpt(ckpt_dir, ckpt_record_file, args):
@@ -196,10 +266,13 @@ def main():
 
     model = build_network(model_cfg=cfg.MODEL, num_class=len(cfg.CLASS_NAMES), dataset=test_set)
     with torch.no_grad():
-        if args.eval_all:
-            repeat_eval_ckpt(model, test_loader, args, eval_output_dir, logger, ckpt_dir, dist_test=dist_test)
+        if getattr(args, 'run_tracking', False):
+            track_single_ckpt(model, test_loader, args, eval_output_dir, logger, epoch_id, dist_test=dist_test)
         else:
-            eval_single_ckpt(model, test_loader, args, eval_output_dir, logger, epoch_id, dist_test=dist_test)
+            if args.eval_all:
+                repeat_eval_ckpt(model, test_loader, args, eval_output_dir, logger, ckpt_dir, dist_test=dist_test)
+            else:
+                eval_single_ckpt(model, test_loader, args, eval_output_dir, logger, epoch_id, dist_test=dist_test)
 
 
 if __name__ == '__main__':
