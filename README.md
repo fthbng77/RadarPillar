@@ -2,7 +2,7 @@
 
 # RadarPillars: Reproduction on View-of-Delft
 
-**Radar-only 3D object detection — OpenPCDet-based reproduction of [Gillen et al., IROS 2024](https://arxiv.org/abs/2408.05020)**
+**Radar-only 3D object detection — OpenPCDet-based reproduction of [Musiat et al., IROS 2024](https://arxiv.org/abs/2408.05020)**
 
 </div>
 
@@ -55,18 +55,13 @@ Qualitative results on View-of-Delft validation frames using the **v1.0 checkpoi
   <img src="docs/visualizations/bev_00360.png" width="100%" alt="BEV GT vs predictions, VoD sample 00360">
 </p>
 
-Reproduce these from a checkpoint — run inference, then render BEV:
+Reproduce these from a checkpoint — run inference:
 
 ```bash
-# 1. Inference → writes result.pkl under output/.../eval/
+# Inference → writes result.pkl under output/.../eval/
 python tools/test.py \
   --cfg_file tools/cfgs/vod_models/vod_radarpillar_rot.yaml \
   --ckpt weights/radarpillar_vod_best_map52.56.pth
-
-# 2. Render BEV (GT vs predictions) for chosen val frames
-python tools/demo_bev.py \
-  --pkl output/cfgs/vod_models/vod_radarpillar_rot/<run>/eval/.../result.pkl \
-  --samples 00373 00360 --epoch 60 --output_dir docs/visualizations
 ```
 
 ---
@@ -120,7 +115,7 @@ bash experiments/chain_scripts/multiseed_v2.sh
 ```bash
 CUDA_VISIBLE_DEVICES=0 python tools/test.py \
   --cfg_file tools/cfgs/vod_models/vod_radarpillar_rot.yaml \
-  --ckpt output/cfgs/vod_models/vod_radarpillar_rot/paper_faithful_rot_s3/ckpt/checkpoint_best.pth
+  --ckpt weights/radarpillar_vod_best_map52.56.pth
 ```
 
 ---
@@ -137,9 +132,9 @@ CUDA_VISIBLE_DEVICES=0 python tools/test.py \
 ## Citation
 
 ```bibtex
-@inproceedings{gillen2024radarpillars,
+@inproceedings{musiat2024radarpillars,
   title     = {RadarPillars: Efficient Object Detection from 4D Radar Point Clouds},
-  author    = {Gillen, Julius and Bieder, Manuel and Stiller, Christoph},
+  author    = {Musiat, Alexander and Reichardt, Laurenz and Schulze, Michael and Wasenm{\"u}ller, Oliver},
   booktitle = {Proc. IEEE/RSJ Int. Conf. Intelligent Robots and Systems (IROS)},
   year      = {2024}
 }

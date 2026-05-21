@@ -117,7 +117,7 @@ def export_pkl_to_kitti_txt(pkl_path, output_dir):
 
             line = (f"{name} {trunc:.2f} {int(occ)} {alpha:.2f} "
                     f"{bbox[0]:.2f} {bbox[1]:.2f} {bbox[2]:.2f} {bbox[3]:.2f} "
-                    f"{dims[0]:.2f} {dims[1]:.2f} {dims[2]:.2f} "
+                    f"{dims[1]:.2f} {dims[2]:.2f} {dims[0]:.2f} "
                     f"{loc[0]:.2f} {loc[1]:.2f} {loc[2]:.2f} "
                     f"{ry:.2f} {score:.4f}")
             lines.append(line)
@@ -182,7 +182,7 @@ def visualize_bev_from_pkl(sample_id, pkl_path, epoch_num, output_dir,
                 ry = det['rotation_y'][i]
                 line = (f"{name} {trunc:.2f} {occ} {alpha:.2f} "
                         f"{bbox[0]:.2f} {bbox[1]:.2f} {bbox[2]:.2f} {bbox[3]:.2f} "
-                        f"{dims[0]:.2f} {dims[1]:.2f} {dims[2]:.2f} "
+                        f"{dims[1]:.2f} {dims[2]:.2f} {dims[0]:.2f} "
                         f"{loc[0]:.2f} {loc[1]:.2f} {loc[2]:.2f} "
                         f"{ry:.2f} {score:.4f}")
                 obj = parse_label_line(line, is_pred=True)
