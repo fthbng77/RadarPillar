@@ -46,6 +46,31 @@ Key implementation details:
 
 ---
 
+## Demo
+
+Qualitative results on View-of-Delft validation frames using the **v1.0 checkpoint** (mAP_3D 52.56). Left: ground truth (solid). Right: GT + model predictions (dashed, with confidence). Radar points are colored by RCS.
+
+<p align="center">
+  <img src="docs/visualizations/bev_00373.png" width="100%" alt="BEV GT vs predictions, VoD sample 00373"><br>
+  <img src="docs/visualizations/bev_00360.png" width="100%" alt="BEV GT vs predictions, VoD sample 00360">
+</p>
+
+Reproduce these from a checkpoint — run inference, then render BEV:
+
+```bash
+# 1. Inference → writes result.pkl under output/.../eval/
+python tools/test.py \
+  --cfg_file tools/cfgs/vod_models/vod_radarpillar_rot.yaml \
+  --ckpt weights/radarpillar_vod_best_map52.56.pth
+
+# 2. Render BEV (GT vs predictions) for chosen val frames
+python tools/demo_bev.py \
+  --pkl output/cfgs/vod_models/vod_radarpillar_rot/<run>/eval/.../result.pkl \
+  --samples 00373 00360 --epoch 60 --output_dir docs/visualizations
+```
+
+---
+
 ## Install
 
 ```bash
