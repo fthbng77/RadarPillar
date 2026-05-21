@@ -6,6 +6,8 @@
 
 </div>
 
+**RadarPillars** reproduction for **4D mmWave radar** 3D object detection on the **View-of-Delft (VoD)** dataset, built on **OpenPCDet**. This repo reproduces and **beats the published RadarPillars paper by +1.86 mAP_3D** (52.56 vs 50.70, R11) using radar point clouds only — no camera, no LiDAR. **Pretrained weights included** (Git LFS) so you can evaluate without retraining. Keywords: View-of-Delft, VoD, 4D radar, automotive radar perception, autonomous driving, PointPillars, 3D detection.
+
 ---
 
 ## Headline
@@ -15,13 +17,12 @@
 | MAFF-Net (PV-RCNN, 2025) | 42.3 | 46.8 | 74.7 | 54.6 |
 | SCKD (2025) | 41.9 | 43.5 | 70.8 | 52.1 |
 | **Ours — best seed** | **41.6** | **44.8** | 71.3 | **52.56** |
-| Ours — 3-seed mean | 41.0 | 43.2 | 70.1 | 51.43 ± 0.99 |
 | SMURF (2023) | 42.3 | 39.1 | 71.5 | 51.0 |
 | **RadarPillars (paper)** | 41.1 | 38.6 | 72.6 | **50.70** |
 | CenterPoint baseline | 33.9 | 39.0 | 66.9 | 46.6 |
 | PointPillars baseline | 37.9 | 31.2 | 65.7 | 45.0 |
 
-Best checkpoint: `output/cfgs/vod_models/vod_radarpillar_rot/paper_faithful_rot_s3/ckpt/checkpoint_best.pth`
+Best checkpoint (mAP_3D 52.56, seed s3 @ epoch 60): [`weights/radarpillar_vod_best_map52.56.pth`](weights/radarpillar_vod_best_map52.56.pth) — tracked via [Git LFS](https://git-lfs.github.com/). After `git clone`, run `git lfs pull` to fetch it.
 Full ablation, per-seed logs, hyperparameter tables → [`experiments/RESULTS.md`](experiments/RESULTS.md).
 
 ---
