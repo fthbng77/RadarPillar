@@ -13,4 +13,6 @@ pcdet.egg-info/
 .venv/
 data/VoD/
 wandb/
-AGENTS_VOD.mdexperiments/logs/paper_faithful_rot_*.log.gz
+AGENTS_VOD.md
+experiments/logs/paper_faithful_rot_*.log.gz
+.claude/
