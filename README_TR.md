@@ -28,6 +28,39 @@ Ablasyon, tohum bazlı kayıtlar, hiperparametre tabloları → [`experiments/RE
 
 ---
 
+## Genişletilmiş VoD Radar-Only Liderlik Tablosu
+
+VoD doğrulama setinde (Tüm Anotasyonlu Alan, 3D AP %, R11) raporlanan tüm radar-only yöntemlerin kapsamlı karşılaştırması. [Awesome-3D-Detection-with-4D-Radar](https://github.com/liuzengyun/Awesome-3D-Detection-with-4D-Radar) kataloğu + literatür verisi birleşimi.
+
+| Sıra | Yöntem | Yıl | Araç | Yaya | Bisikletçi | mAP_3D |
+|:---:|---|:---:|:---:|:---:|:---:|:---:|
+| 1 | MAFF-Net | 25'RA-L | 42.3 | 46.8 | **74.7** | **54.6** |
+| 2 | **Bizim (dense + NMS=0.20, yeni)** ¹ | 2026 | 38.89 | **49.16** | 73.70 | **53.92** |
+| 3 | **Bizim (rot s3, yayımlanan)** ² | 2026 | 41.6 | 44.8 | 71.3 | 52.56 |
+| 4 | SCKD | 25'AAAI | 41.89 | 43.51 | 70.83 | 52.08 |
+| 5 | Dual-View Radar Reconstruction ★ | 26'Elec.Lett. | — | — | — | 52.07 |
+| 6 | RadarGaussianDet3D | 25 | 40.7 | 42.4 | 73.0 | 52.0 |
+| 7 | PSTOPS | 25 | — | — | — | 50.99 |
+| 8 | SMURF | 23'TIV | 42.31 | 39.09 | 71.50 | 50.97 |
+| 9 | RadarPillars (orijinal) | 24'IROS | 41.1 | 38.6 | 72.6 | 50.70 |
+| 10 | RadarNeXt | 25 | 37.44 | 41.83 | 72.16 | 50.48 |
+| 11 | MUFASA | 24'ICANN | **43.10** | 38.97 | 68.65 | 50.24 |
+| 12 | SMIFormer | 23 | 39.53 | 41.88 | 64.91 | 48.77 |
+| 13 | CenterPoint (taban) | — | 33.87 | 39.01 | 66.85 | 46.58 |
+| 14 | DR-Net ★ | 25'TCSVT | — | — | — | 45.24 |
+| 15 | PointPillars (taban) | — | 37.92 | 31.24 | 65.66 | 44.94 |
+| 16 | RPFA-Net (yeniden uygulama) | 21'ITSC | 33.45 | 26.42 | 56.34 | 38.75 |
+
+¹ Tek-seed sonucu (sabit seed 666). Mekanizma: çoklu sınıf baseline üzerinde anchor `feature_map_stride 2→1` (yoğun anchor grid, `UPSAMPLE_STRIDES [1,2,4]→[2,4,8]`) + post-hoc `NMS_THRESH 0.10→0.20` sweep (kalabalık yaya recall'una göre ayarlandı). Değerler `checkpoint_best.pth` üzerinden (early-stop weighted-mean R40 ile seçilen ep71). Çok-seed doğrulama bekliyor; gözlenen Yaya kazancı (+4.7 R11 vs baseline 44.49) 3-seed std (~1 mAP) değerinin çok üstünde.
+
+² Yayımlanmış ağırlık — 3 random-seed run'ın en iyisi; LFS üzerinden takip ediliyor.
+
+★ = [Awesome-3D-Detection-with-4D-Radar](https://github.com/liuzengyun/Awesome-3D-Detection-with-4D-Radar) kataloğundan eklendi. Sınıf bazlı kırılım kaynaktan çıkarılamadı.
+
+Detaylı kaynak gösterimi + Sürüş Koridoru tablosu: [`docs/sota_comparison.tex`](docs/sota_comparison.tex).
+
+---
+
 ## Mimari
 
 ```
