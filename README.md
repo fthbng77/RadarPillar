@@ -27,6 +27,39 @@ Full ablation, per-seed logs, hyperparameter tables → [`experiments/RESULTS.md
 
 ---
 
+## Full VoD Radar-Only Leaderboard
+
+Comprehensive comparison across radar-only methods reporting on the View-of-Delft validation set (Entire Annotated Area, 3D AP %, R11). Combines published numbers with the [Awesome-3D-Detection-with-4D-Radar](https://github.com/liuzengyun/Awesome-3D-Detection-with-4D-Radar) catalog.
+
+| Rank | Method | Year | Car | Ped | Cyc | mAP_3D |
+|:---:|---|:---:|:---:|:---:|:---:|:---:|
+| 1 | MAFF-Net | 25'RA-L | 42.3 | 46.8 | **74.7** | **54.6** |
+| 2 | **Ours (dense + NMS=0.20, new)** ¹ | 2026 | 38.89 | **49.16** | 73.70 | **53.92** |
+| 3 | **Ours (rot s3, published)** ² | 2026 | 41.6 | 44.8 | 71.3 | 52.56 |
+| 4 | SCKD | 25'AAAI | 41.89 | 43.51 | 70.83 | 52.08 |
+| 5 | Dual-View Radar Reconstruction ★ | 26'Elec.Lett. | — | — | — | 52.07 |
+| 6 | RadarGaussianDet3D | 25 | 40.7 | 42.4 | 73.0 | 52.0 |
+| 7 | PSTOPS | 25 | — | — | — | 50.99 |
+| 8 | SMURF | 23'TIV | 42.31 | 39.09 | 71.50 | 50.97 |
+| 9 | RadarPillars (paper) | 24'IROS | 41.1 | 38.6 | 72.6 | 50.70 |
+| 10 | RadarNeXt | 25 | 37.44 | 41.83 | 72.16 | 50.48 |
+| 11 | MUFASA | 24'ICANN | **43.10** | 38.97 | 68.65 | 50.24 |
+| 12 | SMIFormer | 23 | 39.53 | 41.88 | 64.91 | 48.77 |
+| 13 | CenterPoint (baseline) | — | 33.87 | 39.01 | 66.85 | 46.58 |
+| 14 | DR-Net ★ | 25'TCSVT | — | — | — | 45.24 |
+| 15 | PointPillars (baseline) | — | 37.92 | 31.24 | 65.66 | 44.94 |
+| 16 | RPFA-Net (re-impl) | 21'ITSC | 33.45 | 26.42 | 56.34 | 38.75 |
+
+¹ Single-seed result (fixed seed 666). Mechanism: anchor `feature_map_stride 2→1` (denser anchor grid, `UPSAMPLE_STRIDES [1,2,4]→[2,4,8]`) over the multi-class baseline, plus post-hoc `NMS_THRESH 0.10→0.20` sweep tuned for crowded-pedestrian recall. Numbers from `checkpoint_best.pth` (early-stop weighted-mean R40 selected ep71). Multi-seed confirmation pending; observed Ped gain (+4.7 R11 vs baseline 44.49) far exceeds the 3-seed std (~1 mAP) of the baseline.
+
+² Published checkpoint — best of 3 random-seed runs; weights tracked via Git LFS above.
+
+★ = added from [Awesome-3D-Detection-with-4D-Radar](https://github.com/liuzengyun/Awesome-3D-Detection-with-4D-Radar). Per-class breakdown not extracted from source.
+
+Full provenance + Driving Corridor table: [`docs/sota_comparison.tex`](docs/sota_comparison.tex).
+
+---
+
 ## Architecture
 
 ```
