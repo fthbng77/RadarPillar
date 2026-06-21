@@ -155,10 +155,29 @@ CUDA_VISIBLE_DEVICES=0 python tools/test.py \
 
 ## Configs
 
+**Baseline (RadarPillars reproduction):**
+
 | File | Purpose |
 |---|---|
 | `tools/cfgs/vod_models/vod_radarpillar.yaml` | paper-faithful baseline (no rotation) |
 | `tools/cfgs/vod_models/vod_radarpillar_rot.yaml` | **rotation-augmented variant — produced the headline result** |
+
+### Pedestrian-Focused Experiments
+
+These configs are a separate line of work that targets the hardest class
+(pedestrian) on top of the rotation-augmented baseline. They are **not** part of
+the core RadarPillars reproduction above. The full write-up is in the paper
+(PDF on the [Releases](../../releases) page); the configs below let you
+reproduce its numbers.
+
+| File | Change vs. `_rot` baseline | Result (R11 3D AP) |
+|---|---|---|
+| `tools/cfgs/vod_models/vod_radarpillar_rot_dense.yaml` | denser anchor grid (`feature_map_stride` 2→1, `UPSAMPLE_STRIDES` [1,2,4]→[2,4,8]) + `NMS_THRESH` 0.10→0.20 | **53.92 mAP** (Car 38.89 / Ped **49.16** / Cyc 73.70) — best |
+| `tools/cfgs/vod_models/vod_radarpillar_ped.yaml` | single-class pedestrian (control; anchors/voxel unchanged) | Ped −2.9 vs 3-class — co-training helps the hard class |
+| `tools/cfgs/vod_models/vod_radarpillar_rot_voxel.yaml` | finer pillar `VOXEL_SIZE` 0.16→0.08 at fixed anchor stride (control) | Car −5.75 — pillar fragmentation on sparse radar |
+
+`_rot_dense` is the recommended pedestrian config; the other two are controls
+that isolate why the dense-anchor change works.
 
 ---
 

@@ -136,10 +136,30 @@ CUDA_VISIBLE_DEVICES=0 python tools/test.py \
 
 ## Konfigler
 
+**Temel (RadarPillars yeniden üretimi):**
+
 | Dosya | Açıklama |
 |---|---|
 | `tools/cfgs/vod_models/vod_radarpillar.yaml` | makale Section IV'e sadık temel hat (rotation yok) |
 | `tools/cfgs/vod_models/vod_radarpillar_rot.yaml` | **rotation eklenmiş varyant — özet sonucu üreten konfig** |
+
+### Yaya Odaklı Deneyler
+
+Bu konfigler, rotation eklenmiş temel hattın üzerine en zor sınıfı (yaya)
+hedefleyen **ayrı bir çalışma koludur**. Yukarıdaki çekirdek RadarPillars
+yeniden üretiminin parçası **değildir**. Tam anlatım makalede (PDF için
+[Releases](../../releases) sayfası); aşağıdaki konfigler makaledeki sayıları
+yeniden üretmenizi sağlar.
+
+| Dosya | `_rot` temele göre değişiklik | Sonuç (R11 3B AP) |
+|---|---|---|
+| `tools/cfgs/vod_models/vod_radarpillar_rot_dense.yaml` | yoğun çapa ızgarası (`feature_map_stride` 2→1, `UPSAMPLE_STRIDES` [1,2,4]→[2,4,8]) + `NMS_THRESH` 0.10→0.20 | **53.92 mAP** (Araç 38.89 / Yaya **49.16** / Bisikletli 73.70) — en iyi |
+| `tools/cfgs/vod_models/vod_radarpillar_ped.yaml` | tek-sınıf yaya (kontrol; çapa/voxel sabit) | Yaya −2.9 vs 3-sınıf — birlikte eğitim zor sınıfa yarıyor |
+| `tools/cfgs/vod_models/vod_radarpillar_rot_voxel.yaml` | daha ince pillar `VOXEL_SIZE` 0.16→0.08, çapa adımı sabit (kontrol) | Araç −5.75 — seyrek radarda pillar parçalanması |
+
+`_rot_dense` önerilen yaya konfigidir; diğer ikisi yoğun-çapa değişikliğinin
+neden işe yaradığını ayrıştıran kontrollerdir.
+
 ---
 
 ## Atıf

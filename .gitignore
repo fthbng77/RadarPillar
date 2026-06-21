@@ -16,3 +16,11 @@ wandb/
 AGENTS_VOD.md
 experiments/logs/
 .claude/
+experiments
+# ASYU paper sources — kept local, not in main (PDF shipped via GitHub Release)
+asyu/
+paper/
+paper_en/
+# paper-specific helper scripts
+tools/measure_fps.py
+tools/visualize_paper_compare.py
